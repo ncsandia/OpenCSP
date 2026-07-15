@@ -87,12 +87,14 @@ import copy
 from pathlib import Path
 import copy
 import os
+import csv
+import subprocess
 
 ####### HELPER FUNCTIONS ######
 #### DO NOT MODIFY
 
 
-def increment_change(lower_limit=-100, upper_limit=100, steps=1, naming_prefix=None):
+def increment_change(lower_limit=-100, upper_limit=100, steps=1, naming_prefix='', unit_sig=3):
     """
 
     Summary
@@ -123,30 +125,76 @@ def increment_change(lower_limit=-100, upper_limit=100, steps=1, naming_prefix=N
     _dictionary_
         A dictionary of names and functions to be used for calculating new values of a numeric variable.
     """
-
     modifications = {}
-    for i in range(lower_limit, upper_limit, steps):
-        # Define the function capturing the current i value correctly using default argument
-        my_function = lambda x, increment=i: x + increment
-        if i == 0:
-            key = f'sa_{naming_prefix}0b000'  # zero-padded for single digit negative
-        elif i < 0:
-            abs_i = abs(i)
-            if abs_i < 10:
-                key = f'sa_{naming_prefix}n{abs_i:03d}'  # zero-padded for single digit negative
-            if abs_i < 100:
-                key = f'sa_{naming_prefix}n{abs_i:02d}'
-            else:
-                key = f'sa_{naming_prefix}n{abs_i}'
+
+    def format_float_key(value, prefix, unit_sig=3):
+        abs_val = abs(value)
+        int_part = int(abs_val)
+        decimal_part = abs_val - int_part
+
+        # Extract decimal digits as string without leading '0.'
+        # For example, 0.4 -> '4', 0.45 -> '45', 0.456 -> '456'
+        decimal_str = f"{decimal_part:.{unit_sig}f}".split('.')[1]  # 3 signficance digits
+
+        # Pad integer part if less than 100
+        if int_part < 10:
+            int_str = f"{int_part:03d}"
+        elif int_part < 100:
+            int_str = f"{int_part:02d}"
         else:
-            if i < 10:
-                key = f'sa_{naming_prefix}p{i:03d}'  # zero-padded for single digit negative
-            if i < 100:
-                key = f'sa_{naming_prefix}p{i:02d}'
+            int_str = str(int_part)
+
+        sign = 'n' if value < 0 else 'p'
+        return f'sa_{prefix}{sign}{int_str}_{decimal_str}'
+
+    if any(isinstance(x, float) for x in (lower_limit, upper_limit, steps)):
+        i = lower_limit
+        while i <= upper_limit + 1e-12:
+            # Define the function capturing the current i value correctly using default argument
+            my_function = lambda x, increment=i: x + increment
+
+            if abs(i) < 1e-12:
+                key = f'sa_{naming_prefix}0b000'  # zero-padded for single digit negative
             else:
-                key = f'sa_{naming_prefix}p{i}'
-        modifications[key] = my_function
+                key = format_float_key(i, naming_prefix, unit_sig)
+            modifications[key] = my_function
+            i += steps
+    else:
+        for i in range(lower_limit, upper_limit + 1, steps):
+            # Define the function capturing the current i value correctly using default argument
+            my_function = lambda x, increment=i: x + increment
+            if i == 0:
+                key = f'sa_{naming_prefix}0b000'  # zero-padded for single digit negative
+            elif i < 0:
+                abs_i = abs(i)
+                if abs_i < 10:
+                    key = f'sa_{naming_prefix}n{abs_i:03d}'  # zero-padded for single digit negative
+                elif abs_i < 100:
+                    key = f'sa_{naming_prefix}n{abs_i:02d}'
+                else:
+                    key = f'sa_{naming_prefix}n{abs_i}'
+            else:
+                if i < 10:
+                    key = f'sa_{naming_prefix}p{i:03d}'  # zero-padded for single digit negative
+                elif i < 100:
+                    key = f'sa_{naming_prefix}p{i:02d}'
+                else:
+                    key = f'sa_{naming_prefix}p{i}'
+            modifications[key] = my_function
+
+    zero_key = f'sa_{naming_prefix}0b000'
+    if zero_key not in modifications:
+        modifications[zero_key] = lambda x: x
     return modifications
+
+
+# testdata= {}
+# fx = 5
+# testmod = increment_change(-.5,.5,.2, naming_prefix='test')
+# for key,func in testmod.items():
+#     testdata[key] = func(fx)
+
+# print(testdata)
 
 
 def update_ini_file_by_search(
@@ -253,7 +301,9 @@ def singleparametersa(
         - the increment_change() function is applied to dataset to calculate incremental changes to parameter
         - increment_change() assigns a single modification for chosen parameter and saves it as a new dataset
     - generates a new H5 file for each modification of a parameter in the dataset.
+        - Modified HDF5 files are saved in subdirectories named after the modification suffix.
     - generates an INI configuration files corresponding with each newly generated H5 filem with an updated filepath.
+    - returns a csv file with all the filepaths for newly generated INI files for subsequent terminal processing.
 
 
     Parameters
@@ -330,14 +380,6 @@ def singleparametersa(
                         )
 
 
-    Notes
-    -----
-    - The function assumes that the target dataset is uniquely identifiable by the `target_variable` substring.
-    - Modified HDF5 files are saved in subdirectories named after the modification suffix.
-    - Corresponding INI files are generated for each modified dataset using the provided template and updated parameters.
-    - The function requires the helper functions `increment_change` and `update_ini_file_by_search` to be defined elsewhere.
-
-
     Raises
     ------
     StopIteration
@@ -346,6 +388,8 @@ def singleparametersa(
         If the target dataset is not found or multiple datasets match the target variable.
     ValueError
         If the target dataset's shape is unsupported (not scalar or 1D array).
+
+
     """
 
     # Iterate over all input file in input directory and extract dataset of interest from the h5 file.
@@ -379,8 +423,9 @@ def singleparametersa(
         raise KeyError(f"Expected exactly one dataset matching '{target_variable}'\n, found {len(target_path)}")
     target_path = target_path[0]
     original_values = data_dict[target_path]
-    modifications = increment_change(lower_limit, upper_limit, steps, naming_prefix)
+    modifications = increment_change(lower_limit, upper_limit, steps, naming_prefix, unit_sig=3)
 
+    inifile_pathlist = []
     # if target dataset is a 1D array
     if isinstance(original_values, np.ndarray) and original_values.ndim == 1:
         for i, row in enumerate(original_values):
@@ -451,6 +496,7 @@ def singleparametersa(
                 update_ini_file_by_search(
                     input_ini_template_path, ini_file_path, updated_id, updated_process_input_file_path
                 )
+                inifile_pathlist.append(ini_file_path)
 
     elif np.isscalar(original_values) or (isinstance(original_values, np.ndarray) and original_values.ndim == 0):
         for key, modify_func in modifications.items():
@@ -514,10 +560,18 @@ def singleparametersa(
             update_ini_file_by_search(
                 input_ini_template_path, ini_file_path, updated_id, updated_process_input_file_path
             )
+            inifile_pathlist.append(ini_file_path)
     else:
         raise ValueError(
             f"Unsupported data shape for target variable '{target_variable}': {getattr(original_values, 'shape', type(original_values))}"
         )
+
+    inifile_pathlist_df = pd.DataFrame(inifile_pathlist, columns=['ini_file_paths'])
+    csv_path = os.path.join(output_dir, 'ini_file_paths.csv')
+    inifile_pathlist_df.to_csv(csv_path, index=False)
+    print(f"list of ini filepaths saved to {csv_path}")
+
+    return inifile_pathlist
 
 
 ####### EXECUTION OF MAIN FUNCTION ######
@@ -531,45 +585,47 @@ target_variable_type = "m"
 naming_prefix = 'mdAAA'
 
 # update filepath for your scenario deck. File must be saved as csv.
-input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input'
+input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input'
 
 # update filepath for your output directory. All modified h5 files and related generated .ini files will be stored here.
-output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/002_output"
+output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/002_output"
 
 # update filepath for the unmodified h5 measurment input file to be used to generated newly modified h5 input file.
 sofast_measurement = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/measurement_facet.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/measurement_facet.h5"
 )
 
 # update filepath for the unmodified h5 orientation input file to be used to generated newly modified h5 input file.
-sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/spatial_orientation.h5"
+sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/spatial_orientation.h5"
 
 # update filepath for the unmodified h5 camera input file to be used to generated newly modified h5 input file.
-sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/camera_sofast_downsampled.h5"
+sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/camera_sofast_downsampled.h5"
 
 # update filepath for the unmodified h5 display input file to be used to generated newly modified h5 input file.
-sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/display_distorted_2d.h5"
+sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/display_distorted_2d.h5"
 
 # update filepath for the unmodified .json facet data file. This is only needed for generating filepath for facet data in .ini file.
 facet_data = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/Facet_NSTTF.json"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/Facet_NSTTF.json"
 )
 
 # update filepath for the unmodified h5 calibration file. This is only needed for generating filepath for facet data in .ini file.
 sofast_calibration = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/001_input/image_calibration.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/image_calibration.h5"
 )
 
 # update filepath for your empty .ini file to be used to generate all new .ini file for each row-wise modifications.
-input_ini_template_path = "C:/Users/nichowd/Desktop/Experiments/2026_07_09_single_param_sa_m_dist_optic_screen/004_ini_files/ini_template_2_alan.ini"
+input_ini_template_path = (
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/004_ini_files/ini_template.ini"
+)
 
 # update relevant identification information for the .ini files.
-measurement_id = "test123"
-post_process_id = "test1234"
+measurement_id = "20260710"
+post_process_id = "dist_optic_screen"
 
 
-# after updating file paths above, run the function below to generate new input files and .ini files.
-singleparametersa(
+# after updating file paths above, run the function below to generate new input files, .ini files, and a .ini filepath list
+inifile_pathlist = singleparametersa(
     input_dir=Path(input_dir),
     target_variable=target_variable,
     targetvartype=target_variable_type,
@@ -584,4 +640,27 @@ singleparametersa(
     measurement_id=measurement_id,
     post_process_id=post_process_id,
     input_ini_template_path=input_ini_template_path,
+    lower_limit=-0.05,
+    upper_limit=0.05,
+    steps=0.001,
 )
+
+
+# the following code will process the SOFAST process file using each .ini file in the pathlist.
+for file_path in inifile_pathlist:
+    file_path = Path(file_path)
+    python_executable = r"C:/Users/nichowd/Code/env_310_OpenCSP/Scripts/python.exe"
+    cmd = [
+        python_executable,
+        "C:/Users/nichowd/Code/OpenCSP/example/sofast_fringe/single_facet/example_process_single_facet.py",
+        "--verbose",
+        "-s",
+        file_path,
+    ]
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        print(f"Successfully processed {file_path}")
+        print("Output:", result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Error processing {file_path}")
+        print("Error output:", e.stderr)
