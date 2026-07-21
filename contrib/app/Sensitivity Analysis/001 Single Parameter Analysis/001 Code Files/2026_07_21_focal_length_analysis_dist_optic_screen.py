@@ -60,11 +60,11 @@ SandiaAI was used to faciliate code development and docstring documentation.
 
 ####### IMPORT LIBRARIES ######
 
+
 import os
 import json
 import pandas as pd
 import csv
-import matplotlib.pyplot as plt
 
 ########################################## HELPER FUNCTIONS ##########################################
 #### DO NOT MODIFY
@@ -99,6 +99,7 @@ def find_or_create_analysis_folder(output_dir, return_all_dir=False):
 
 
 ## check if find_or_create_analysis_folder function is working
+
 # find_or_create_analysis_folder(root_directory)
 
 
@@ -117,25 +118,23 @@ def find_files(output_dir, file_end_key, save_json_filepath=False, file_name=Non
             csv_path = os.path.join(analysis_dir, 'focal_length_data_filepaths.csv')
             jsonfilepaths.to_csv(csv_path, index=False)
             print(f"Focal Length filepaths saved to {csv_path}")
-
         else:
             jsonfilepaths = pd.DataFrame(matching_files_list, columns=[f'{file_name}'])
             saved_file_name = f'{file_name}.csv'
             csv_path = os.path.join(analysis_dir, saved_file_name)
             jsonfilepaths.to_csv(csv_path, index=False)
             print(f"Focal Length filepaths saved to {csv_path}")
-        return matching_files_list, csv_path
-    else:
-        return matching_files_list
+
+    return matching_files_list, csv_path
 
 
-# check if find_files function is working
+## check if find_files function is working
 
-test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_o_v_cam_screen_cam/002_output"
-
-# files = find_files(test_directory, file_end_key='_measurement_statistics.json', save_json_filepath=True, file_name="testing_file_name")
-# print(files)
-
+test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output"
+files = find_files(
+    test_directory, file_end_key='_measurement_statistics.json', save_json_filepath=True, file_name="testing_file_name"
+)
+print(files)
 files, file_paths_test = find_files(
     test_directory, file_end_key='_measurement_statistics.json', save_json_filepath=True, file_name="testing_file_name"
 )
@@ -196,76 +195,9 @@ key_to_extract = 'focal_lengths_parabolic_xy'  # Replace with your key
 df = tabulate_data_from_files(files, key_to_extract, name_end='_test1234')
 print(df)
 
-# # check if tabulate_data_from_files function is working excluding substrings
-# key_to_extract = 'focal_lengths_parabolic_xy'  # Replace with your key
-# df = tabulate_data_from_files(files, key_to_extract, name_end='_d', exclude_substrings=['row1', 'row2'])
-# print(df)
-
-
-## extend settings column from dataset to create a sign and increment column (x-axis for future plots)
-
-
-def extend_settings_column(df, column_name, print_check=False):
-    df['sign'] = None
-    df['increment'] = None
-    df['row'] = None
-    df['vector_direction'] = None
-    for i, row in df.iterrows():
-        for scale in ['n', 'p', 'b']:
-            value = row[f'{column_name}']
-            idx = value.rfind(scale)
-            if idx != -1 and idx + 1 < len(value) and value[idx + 1].isdigit():
-                sign = value[idx]
-                df.at[i, 'sign'] = sign
-                start = idx + 1
-                # Find the underscore followed by a non-digit character
-                for j in range(start, len(value) - 1):
-                    if value[j] == '_' and not value[j + 1].isdigit():
-                        end = j
-                        break
-                else:
-                    # If no such underscore found, take till end of string
-                    end = len(value)
-                increment = value[start:end].replace('_', '.', 1)
-                df.at[i, 'increment'] = increment
-                break  # stop after first valid scale found
-    df['sign'] = df['sign'].astype('category')
-    df['increment'] = df['increment'].astype('float64')
-    df.loc[df['sign'] == 'n', 'increment'] *= -1
-    if print_check == True:
-        print(df.to_string())
-    else:
-        print(df)
-    for i, row in enumerate(df['settings']):
-        if 'row' in row:
-            rownum = row.split('row')
-            rownum = rownum[1]
-            df['row'].iloc[i] = rownum
-            df['row'] = df['row'].apply(lambda x: pd.to_numeric(x, errors='coerce')).dropna().astype(int)
-    if 'row' in df.columns:
-        unique_rows = set(df['row'].unique())
-        allowed = {0, 1, 2}
-        # Check if all unique values are subset of {0,1,2}
-        if unique_rows.issubset(allowed):
-            mapping = {0: 'x', 1: 'y', 2: 'z'}
-            df['vector_direction'] = df['row'].map(mapping)
-        else:
-            print("Column 'row' contains values outside 0,1,2; skipping vector_direction creation.")
-
-    return df
-    #    shared_prefix = os.path.commonprefix(df[f'{column_name}'].tolist())
-    #    print(shared_prefix)
-
-    # if 'row' in df[f'{column_name}']:
-    #     rownum = df[f'{column_name}'].split('row')
-    #     rownum = rownum[1]
-    #     print(rownum)
-
-    print(df)
-
-
-extend_settings_column(df, 'settings')
-
+# check if tabulate_data_from_files function is working excluding substrings
+key_to_extract = 'focal_lengths_parabolic_xy'  # Replace with your key
+df = tabulate_data_from_files(files, key_to_extract, name_end='_d', exclude_substrings=None)
 print(df)
 
 
@@ -300,12 +232,15 @@ def split_dataframes_by_substrings(df, split_substrings, include_unmatched=False
 
 # check if dataframe can be split using substrings
 
-dfs = split_dataframes_by_substrings(
-    df, split_substrings=['row0', 'row1', 'row2'], include_unmatched=True, unmatched_in_all=True
-)
-print(dfs)
+# df1, df2, df3 = split_dataframes_by_substrings(df, split_substrings=['row0', 'row1', 'row2'], include_unmatched=True, unmatched_in_all=True)
+# print(df1)
+# print(df2)
+# print(df3)
 
-# df1a, df1b, = split_dataframes_by_substrings(df1, split_substrings=['n','p'], include_unmatched=True, unmatched_in_all=True)
+
+# df1a, df1b = split_dataframes_by_substrings(
+#     df1, split_substrings=['n', 'p'], include_unmatched=True, unmatched_in_all=True
+# )
 # print(df1a)
 # print(df1b)
 
@@ -351,150 +286,6 @@ def normalize_split_key(split_key):
     return [split_key]
 
 
-def focal_length_line_plot(df, directory, variable_compared='x', default_data=None, save_plot=False):
-    def plot_focal_length(
-        x, y, legend_y, xlabel, ylabel, title, imagefile_name, y2=None, legend_y2=None, save_plot=save_plot
-    ):
-        fig, ax = plt.subplots()
-        ax.plot(x, y, color='tab:blue')
-        ax.tick_params(axis='x', labelrotation=45, labelsize=10)
-        ax.tick_params(axis='x', labelsize=10)
-        if y2 is not None:
-            ax.plot(x, y2, color='tab:green')
-            ax.legend([legend_y, legend_y2])
-        else:
-            ax.legend([legend_y])
-        ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
-        ax.grid()
-        plt.tight_layout()
-        if save_plot == True:
-            fig.savefig(f'{imagefile_name}.png')
-            save_path = os.path.join(directory, f'{imagefile_name}.png')
-            plt.savefig(save_path, dpi=300)
-            print(f'Tornado plot of Y of focal length saved in {directory}')
-        plt.show()
-
-    def process_focal_length_plot(single_df, variable_compared, xlabel=None, default_data=None, imagefile_name=None):
-        sorted_df = single_df.sort_values(by='increment')
-        print(sorted_df.to_string())
-        # Data for plotting
-        increment = sorted_df['increment']
-        focal_length_x = sorted_df['x']
-        focal_length_y = sorted_df['y']
-
-        plot_x_label = 'incremental change (m)' if xlabel is None else xlabel
-
-        if variable_compared == 'x':
-            y = focal_length_x
-            plot_y_label = fr'$f_x$ (m)'
-            plot_imagefile_name = 'focal_length_line_plot_x'
-            plot_legend_y = fr'$f_x$'
-            plot_legend_y2 = None
-        elif variable_compared == 'y':
-            y = focal_length_y
-            plot_y_label = fr'$f_y$ (m)'
-            plot_imagefile_name = 'focal_length_line_plot_y'
-            plot_legend_y = fr'$f_y$'
-            plot_legend_y2 = None
-        elif variable_compared == 'both':
-            y = focal_length_x
-            y2 = focal_length_y
-            plot_y_label = fr'$f_x$ (m)'
-            plot_y2_label = fr'$f_y$ (m)'
-            plot_imagefile_name = 'focal_length_line_plot_x_and_y'
-            plot_legend_y = fr'$f_x$'
-            plot_legend_y2 = fr'$f_y$'
-        else:
-            if default_data is not None:
-                default_row = sorted_df[sorted_df['settings'].str.contains(default_data)].iloc[0]
-                print("default row: \n", default_row)
-
-                # Calculate deltas relative to default x and y
-                sorted_df['delta_x'] = sorted_df['x'] - default_row['x']
-                sorted_df['delta_y'] = sorted_df['y'] - default_row['y']
-
-                focal_length_delta_x = sorted_df['delta_x']
-                focal_length_delta_y = sorted_df['delta_y']
-                print(sorted_df)
-
-                if variable_compared == 'delta_x':
-                    y = focal_length_delta_x
-                    plot_y_label = fr"$\Delta$$f_x$ (m)"
-                    plot_imagefile_name = 'focal_length_line_plot_delta_x'
-                    plot_legend_y = fr'$\Delta$$f_x$'
-                    plot_legend_y2 = None
-                elif variable_compared == 'delta_y':
-                    y = focal_length_delta_y
-                    plot_y_label = fr'$\Delta$$f_y$ (m)'
-                    plot_imagefile_name = 'focal_length_line_plot_delta_y'
-                    plot_legend_y = fr'$\Delta$$f_y$'
-                    plot_legend_y2 = None
-                elif variable_compared == 'delta':
-                    y = focal_length_delta_x
-                    y2 = focal_length_delta_y
-                    plot_y_label = fr'$\Delta$$f_{{xy}}$ (m)'
-                    # plot_y2_label = fr'$f_\Deltay$'
-                    plot_imagefile_name = 'focal_length_line_plot_delta_x_and_y'
-                    plot_legend_y = fr'$\Delta$$f_x$'
-                    plot_legend_y2 = fr'$\Delta$$f_y$'
-                else:
-                    raise ValueError('incorrect argument for variable_compared.')
-            else:
-                raise ValueError('must include default_data')
-
-        if imagefile_name != None:
-            plot_imagefile_name = f'{imagefile_name}_{plot_imagefile_name}'
-        else:
-            plot_imagefile_name = plot_imagefile_name
-
-        if variable_compared == 'both' or variable_compared == 'delta':
-            plot_focal_length(
-                increment,
-                y,
-                y2=y2,
-                xlabel=plot_x_label,
-                ylabel=plot_y_label,
-                title='Focal Length Variation (m)',
-                imagefile_name=plot_imagefile_name,
-                legend_y=plot_legend_y,
-                legend_y2=plot_legend_y2,
-            )
-        else:
-            plot_focal_length(
-                increment,
-                y,
-                xlabel=plot_x_label,
-                ylabel=plot_y_label,
-                title='Focal Length variation (m)',
-                imagefile_name=plot_imagefile_name,
-                legend_y=plot_legend_y,
-            )
-
-    if isinstance(df, list):
-        for i, single_df in enumerate(df):
-            if 'vector_direction' in single_df.columns:
-                vector_dir = single_df['vector_direction'].dropna().unique()
-                x_label = (
-                    fr'incremental change $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
-                    if len(vector_dir) == 1
-                    else 'incremental change (m)'
-                )
-                print(f"plotting with vector direction for DataFrame {i}/{len(df)}")
-                process_focal_length_plot(
-                    single_df,
-                    variable_compared,
-                    xlabel=x_label,
-                    imagefile_name=f'Focal Length Comparison_row{vector_dir[0]}',
-                    default_data=default_data,
-                )
-    else:
-        process_focal_length_plot(df, variable_compared, default_data=default_data)
-
-
-analysis_dir = find_or_create_analysis_folder(test_directory)
-focal_length_line_plot(dfs, directory=analysis_dir, variable_compared='delta', default_data='0b00', save_plot=True)
-
-
 def focal_length_visualization(
     df,
     variable_compared='x',
@@ -509,7 +300,13 @@ def focal_length_visualization(
 ):
 
     df = remove_prefix_suffix(df, 'settings', prefix=remove_prefix, suffix=remove_suffix)
-    df = extend_settings_column(df, 'settings', print_check=False)
+
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    # Filter row where 'name' contains 'default'
+    # df_default = df[df['settings'].str.contains(default_key)]
+    # print("default data: \n", df_default)
 
     if default_data == None:
         print("default row set to none. Plots will not show differences.")
@@ -592,12 +389,7 @@ def focal_length_visualization(
                 plt.savefig(save_path, dpi=300)
                 print(f'Tornado plot of Y of focal length saved in {directory}')
 
-        if variable_compared == 'delta':
-            if tornado_plot is True:
-                raise RuntimeError(" Tornado plots cannot be generated. Set default_data to None")
-
     if default_data != None:
-
         default_row = df[df['settings'].str.contains(default_data)].iloc[0]
         print("default row: \n", default_row)
 
@@ -699,19 +491,113 @@ def focal_length_visualization(
                 save_path = os.path.join(directory, f'{deltay_plot_name}')
                 plt.savefig(save_path, dpi=300)
                 print(f'Tornado plot of delta y of focal length saved in {directory}')
+        else:
+            print("Plot cannot be generated. set default_data to None")
 
 
 # check if focal_length_visualization function is working
-# focal_length_visualization(
-#     df1, default_data="0b000", variable_compared='delta_x', remove_prefix='sa_', remove_suffix='_test1234'
-# )
-# focal_length_visualization(
-#     df2, default_data="0b000", variable_compared='delta_y', remove_prefix='sa_', remove_suffix='_test1234'
-# )
-# focal_length_visualization(
-#     df3, default_data="0b000", variable_compared='x', remove_prefix='sa_', remove_suffix='_test1234'
-# )
+focal_length_visualization(
+    df, default_data="0b000", variable_compared='delta_x', remove_prefix='sa_', remove_suffix='_test1234'
+)
+focal_length_visualization(
+    df, default_data="0b000", variable_compared='delta_y', remove_prefix='sa_', remove_suffix='_test1234'
+)
+focal_length_visualization(df, default_data=None, variable_compared='x', remove_prefix='sa_', remove_suffix='_test1234')
 
+# def focal_length_viz_adj(df, default_data=None, variable_compared='x'):
+#     import matplotlib.pyplot as plt
+#     import pandas as pd
+#     import numpy as np
+
+#     # Your extraction function (adjusted to return absolute increment)
+#     def extract_sign_and_increment(setting):
+#         # Find sign character
+#         if 'p' in setting:
+#             sign = 'p'
+#             idx = setting.index('p')
+#         elif 'n' in setting:
+#             sign = 'n'
+#             idx = setting.index('n')
+#         elif 'b' in setting:
+#             sign = 'b'
+#             idx = setting.index('b')
+#         else:
+#             raise ValueError(f"Unknown sign in setting: {setting}")
+
+#         # Extract substring after sign
+#         increment_str = setting[idx + 1 :]
+
+#         # Replace underscores with decimal point
+#         increment_str = increment_str.replace('_', '.')
+
+#         # Convert to float
+#         try:
+#             increment = float(increment_str)
+#         except ValueError:
+#             # If conversion fails, fallback to 0 or raise error
+#             increment = 0.0
+#         return sign, increment
+
+#     df['sign'], df['increment'] = zip(*df['settings'].map(extract_sign_and_increment))
+
+#     # Filter out baseline row for plotting (we don't plot baseline delta)
+#     df_plot = df[df['sign'].isin(['p', 'n'])]
+
+#     # Pivot to get positive and negative deltas side-by-side by increment
+#     if default_data == None:
+#         if variable_compared == 'x':
+
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='x').fillna(0)
+#         elif variable_compared == 'y':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='y').fillna(0)
+#         else:
+#             print("You must set variable_compared to 'x' or 'y' only")
+
+#     elif default_data != None:
+#         if default_data == 'baseline':
+#             default_row = df[df['settings'].str.contains("b000")].iloc[0]
+#         else:
+#             default_row = df[df['settings'].str.contains(default_data)].iloc[0]
+#         print("default row: \n", default_row)
+#         # Calculate deltas relative to default x and y
+#         df_plot['delta_x'] = df_plot['x'] - default_row['x']
+#         df_plot['delta_y'] = df_plot['y'] - default_row['y']
+#         print("dataframe : \n", df)
+
+#         df_plot = df[df['sign'].isin(['p', 'n'])]
+
+#         if variable_compared == 'x':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='delta_x').fillna(0)
+#         elif variable_compared == 'y':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='delta_y').fillna(0)
+#         else:
+#             print("You must set variable_compared to 'delta_x' or 'delta_y' only")
+
+#     else:
+#         print("check default_data argument")
+#     # Sort by increment
+#     pivot_df = pivot_df.sort_index()
+
+#     # Plot tornado plot
+#     plt.figure(figsize=(10, 8))
+
+#     # Negative changes to the left (negative bars)
+#     plt.barh(pivot_df.index, -pivot_df['n'], color='salmon', label='Negative Change')
+
+#     # Positive changes to the right
+#     plt.barh(pivot_df.index, pivot_df['p'], color='skyblue', label='Positive Change')
+
+#     plt.axvline(0, color='black', linewidth=0.8)
+#     plt.xlabel(f'{variable_compared} relative to baseline')
+#     plt.ylabel('Increment')
+#     plt.title(f'Tornado Plot of {variable_compared} for Positive and Negative Changes')
+#     plt.legend()
+#     plt.gca().invert_yaxis()  # Optional: largest increment on top
+#     plt.tight_layout()
+#     plt.show()
+
+
+# focal_length_viz_adj(df, default_data='baseline', variable_compared='delta_x')
 
 ########################################## MAIN FUNCTION ##########################################
 #### DO NOT MODIFY
@@ -756,8 +642,6 @@ def focal_length_comparison(
             files = [row[0] for row in reader]
         print('focal length comparison performed on provided filepaths:', '\n', files)
         df = tabulate_data_from_files(files, key, name_start, name_end)
-        print(df)
-        df = extend_settings_column(df, 'settings')
         print(df)
 
     if save_data is True:
@@ -810,7 +694,6 @@ def focal_length_comparison(
                     remove_prefix=remove_prefix,
                     remove_suffix=remove_suffix,
                 )
-        focal_length_line_plot(df, analysis_dir, variable_compared, default_data, save_plot=True)
 
     else:
         if split_key is None:
@@ -843,7 +726,6 @@ def focal_length_comparison(
                     remove_prefix=remove_prefix,
                     remove_suffix=remove_suffix,
                 )
-        focal_length_line_plot(df, analysis_dir, variable_compared, default_data, save_plot=False)
 
 
 ########################################## EXECUTION OF MAIN FUNCTION ##########################################
@@ -851,24 +733,24 @@ def focal_length_comparison(
 
 # if focal length comparison is assessed for all focal length ouput data in output data, update output directory
 # update output directory below in which all JSON files for the SOFAST focal length output are stored.
-output_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_o_v_cam_screen_cam/002_output"
+output_directory = "C:/Users/nichowd/Desktop/single_parameter_SA/002_output/"
 
 
 # after updating the directory, run the focal_length_comparisons with updated arguments.
 # See focal_length_comparisons() docstring for arguments
 
 focal_length_comparison(
-    output_dir=output_directory,
+    output_dir=test_directory,
     input_file_path=None,
     file_end_key='_measurement_statistics.json',
     key='focal_lengths_parabolic_xy',
-    name_end='_test1234',
+    name_end='_d',
     variable_compared='delta_x',
     default_data='0b00',
     save_data=False,
     save_plot=False,
     save_json_filepath=False,
-    split_key=['row0', 'row1', 'row2'],
+    split_key=['n', 'p'],
     include_unmatched=True,
     unmatched_in_all=True,
     remove_prefix='sa_',

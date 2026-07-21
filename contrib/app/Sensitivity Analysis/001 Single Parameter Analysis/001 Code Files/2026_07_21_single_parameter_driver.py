@@ -586,40 +586,40 @@ target_variable_type = "m"
 naming_prefix = 'mdAAA'
 
 # update filepath for your scenario deck. File must be saved as csv.
-input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input'
+input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input'
 
 # update filepath for your output directory. All modified h5 files and related generated .ini files will be stored here.
-output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/002_output"
+output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output"
 
 # update filepath for the unmodified h5 measurment input file to be used to generated newly modified h5 input file.
 sofast_measurement = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/measurement_facet.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/measurement_facet.h5"
 )
 
 # update filepath for the unmodified h5 orientation input file to be used to generated newly modified h5 input file.
-sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/spatial_orientation.h5"
+sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/spatial_orientation.h5"
 
 # update filepath for the unmodified h5 camera input file to be used to generated newly modified h5 input file.
-sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/camera_sofast_downsampled.h5"
+sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/camera_sofast_downsampled.h5"
 
 # update filepath for the unmodified h5 display input file to be used to generated newly modified h5 input file.
-sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/display_distorted_2d.h5"
+sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/display_distorted_2d.h5"
 
 # update filepath for the unmodified .json facet data file. This is only needed for generating filepath for facet data in .ini file.
 facet_data = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/Facet_NSTTF.json"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/Facet_NSTTF.json"
 )
 
 # update filepath for the unmodified h5 calibration file. This is only needed for generating filepath for facet data in .ini file.
 sofast_calibration = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/001_input/image_calibration.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/image_calibration.h5"
 )
 
 # update filepath for your empty .ini file to be used to generate all new .ini file for each row-wise modifications.
-input_ini_template_path = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/004_ini_files/ini_template_test_2026_07_15.ini"
+input_ini_template_path = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/004_ini_files/ini_template_2_alan.ini"
 
 # update relevant identification information for the .ini files.
-measurement_id = "20260710"
+measurement_id = "20260721"
 post_process_id = "dist_optic_screen"
 
 
@@ -667,7 +667,7 @@ def ini_terminal_execution(inifile_pathlist, python_executable_pathlist, single_
 ## Testing Default INI File -- no parameter changes ##
 
 inipath = [
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_m_dist_optic_screen/002_output/sa_mdAAA0b000/sa_sa_mdAAA0b000.ini"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output/sa_mdAAAn000_001/sa_sa_mdAAAn000_001.ini"
 ]
 ini_terminal_execution(
     inifile_pathlist=inipath,
