@@ -1,0 +1,841 @@
+"""
+
+Summary
+-------
+
+This module is for tabulating and visualizing focal length differences during sensitivity analysis of SOFAST input parameters.
+
+This script performs the following steps:
+
+1. Finds and compiles a list of all JSON output filepaths from SOFAST analysis in the output directory
+2. Extracts and tabulates all focal length data from JSON output files in the output directory.
+3. If desired, saves tabulated data as a csv file in the parent directory under analysis folder.
+4. Generates a tornado plot of all focal length differences for x, y, or both and stores it in analysis folder in the parent directory.
+
+
+Libraries
+---------
+os
+json
+pandas
+
+Examples
+--------
+To run the script, simply update the output directory file path and run the execution function:
+
+            output_directory = "C:/Users/nichowd/Desktop/single_parameter_SA/002_output/"
+
+            focal_length_comparison(
+                                    output_dir
+                                    file_end_key='_measurement_statistics.json',
+                                    key='focal_lengths_parabolic_xy',
+                                    variable_compared = 'x',
+                                    default_data = None,
+                                    save_data=False,
+                                    save_plot=False)
+
+Notes
+-----
+    - The argument 'default_data = ' will find the differences of x or y from the desired row value.
+        - by default this argument is set to None
+        - the argument should be a string of the value that will match a value in the settings column.
+    - The argument save_data and save_plot will save data and or images in an analysis folder in the parent directory.
+
+
+Expected Outputs
+----------------
+This code can save the resulting dataset and images files to an analysis folder in the parent directory in the following subfolders:
+
+    focal_length_data_filepaths - csv file that contains all filepaths for focal length data in the output directory.
+    focal_length_comparison.csv - csv file that contains a compiled dataset of all focal length data from output directory.
+    tornado_plot_focal_length_xxx.png - png image of torando plot(s)
+
+    Note: xxx is the image file name suffix which refers to whether the tornado plot is a plot of x, y, delta_x, or delta_y
+
+AI Acknowledgement
+------------------
+SandiaAI was used to faciliate code development and docstring documentation.
+
+"""
+
+####### IMPORT LIBRARIES ######
+
+import os
+import json
+import pandas as pd
+import csv
+
+########################################## HELPER FUNCTIONS ##########################################
+#### DO NOT MODIFY
+
+
+def find_or_create_analysis_folder(output_dir, return_all_dir=False):
+    # Get parent directory of output_dir
+    parent_dir = os.path.dirname(os.path.abspath(output_dir))
+
+    # List all folders in parent_dir
+    try:
+        entries = os.listdir(parent_dir)
+    except FileNotFoundError:
+        entries = []
+
+    # Find folder containing 'analysis' in its name (case-insensitive)
+    analysis_folders = [
+        entry for entry in entries if os.path.isdir(os.path.join(parent_dir, entry)) and 'analysis' in entry.lower()
+    ]
+
+    if analysis_folders:
+        # Use the first matching folder
+        analysis_dir = os.path.join(parent_dir, analysis_folders[0])
+    else:
+        # Create 'analysis' folder if none found
+        analysis_dir = os.path.join(parent_dir, 'analysis')
+        os.makedirs(analysis_dir, exist_ok=True)
+    if return_all_dir == True:
+        return analysis_dir, parent_dir
+    else:
+        return analysis_dir
+
+
+## check if find_or_create_analysis_folder function is working
+# find_or_create_analysis_folder(root_directory)
+
+
+def find_files(output_dir, file_end_key, save_json_filepath=False, file_name=None):
+    matching_files_list = []
+    for dirpath, dirnames, filenames in os.walk(output_dir):
+        for filename in filenames:
+            if filename.endswith(file_end_key):
+                full_path = os.path.join(dirpath, filename)
+                matching_files_list.append(full_path)
+
+    if save_json_filepath == True:
+        analysis_dir = find_or_create_analysis_folder(output_dir)
+        if file_name == None:
+            jsonfilepaths = pd.DataFrame(matching_files_list, columns=['focal_length_data_filepaths'])
+            csv_path = os.path.join(analysis_dir, 'focal_length_data_filepaths.csv')
+            jsonfilepaths.to_csv(csv_path, index=False)
+            print(f"Focal Length filepaths saved to {csv_path}")
+
+        else:
+            jsonfilepaths = pd.DataFrame(matching_files_list, columns=[f'{file_name}'])
+            saved_file_name = f'{file_name}.csv'
+            csv_path = os.path.join(analysis_dir, saved_file_name)
+            jsonfilepaths.to_csv(csv_path, index=False)
+            print(f"Focal Length filepaths saved to {csv_path}")
+        return matching_files_list, csv_path
+    else:
+        return matching_files_list
+
+
+## check if find_files function is working
+
+test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_14_single_param_sa_m_dist_optic_screen/002_output"
+
+# files = find_files(test_directory, file_end_key='_measurement_statistics.json', save_json_filepath=True, file_name="testing_file_name")
+# print(files)
+
+files = find_files(
+    test_directory, file_end_key='_measurement_statistics.json', save_json_filepath=False, file_name=None
+)
+print(files)
+
+
+def tabulate_data_from_files(files, key, name_start='sa_', name_end='_', exclude_substrings=None):
+
+    if exclude_substrings is None:
+        exclude_substrings = []
+
+    results = []
+    for file_path in files:
+        # find filepath and file name
+        results_folder_name = os.path.dirname(os.path.abspath(file_path))
+        parent_folder_name = os.path.dirname(os.path.abspath(results_folder_name))
+        filename = os.path.basename(parent_folder_name)
+
+        # set table data using file name
+        # # Find the index of the first part starting with 'sa'
+        start_index = filename.find(name_start)
+        if start_index != -1:
+            if name_end:
+                next_end_index = filename.find(name_end, start_index + len(name_start))
+                if next_end_index != -1:
+                    extracted_name = filename[start_index:next_end_index]
+                else:
+                    extracted_name = filename[start_index:]
+            else:
+                # No name_end provided, extract from start_index to end
+                extracted_name = filename[start_index:]
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+            if isinstance(data, list) and len(data) > 0:
+                value = data[0].get(key, None)
+                if isinstance(value, list) and len(value) == 2:
+                    x, y = value
+                    results.append((extracted_name, x, y))
+            else:
+                value = None
+            # print(f"Extracted name: {extracted_name}\n{key}: {value}\n")
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error reading {file_path}: {e}")
+    df = pd.DataFrame(results, columns=['settings', 'x', 'y'])
+
+    # Exclude rows containing any exclude_substrings
+    if exclude_substrings:
+        mask = df['settings'].apply(lambda s: not any(sub in s for sub in exclude_substrings))
+        df = df[mask]
+    return df
+
+
+# # check if tabulate_data_from_files function is working without excluding substrings
+
+key_to_extract = 'focal_lengths_parabolic_xy'  # Replace with your key
+df = tabulate_data_from_files(files, key_to_extract, name_end='_nichowd3')
+print(df)
+
+# # check if tabulate_data_from_files function is working excluding substrings
+# key_to_extract = 'focal_lengths_parabolic_xy'  # Replace with your key
+# df = tabulate_data_from_files(files, key_to_extract, name_end='_d', exclude_substrings=['row1', 'row2'])
+# print(df)
+
+
+def split_dataframes_by_substrings(df, split_substrings, include_unmatched=False, unmatched_in_all=False):
+    """
+    Split DataFrame into multiple DataFrames, each containing rows where 'settings' contains one of the substrings.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to split.
+        split_substrings (list): List of substrings to filter by.
+
+    Returns:
+        list of pd.DataFrame: List of DataFrames corresponding to each substring.
+    """
+    matched_mask = pd.Series(False, index=df.index)
+    dfs = []
+    for sub in split_substrings:
+        subset_df = df[df['settings'].str.contains(sub, na=False)].copy()
+        dfs.append(subset_df)
+        matched_mask |= df.index.isin(subset_df.index)
+    unmatched_df = df[~matched_mask].copy()
+
+    if include_unmatched and not unmatched_df.empty:
+        if unmatched_in_all:
+            dfs = [pd.concat([subset, unmatched_df]).drop_duplicates() for subset in dfs]
+        else:
+            dfs.append(unmatched_df)
+        return dfs
+    else:
+        return dfs
+
+
+# check if dataframe can be split using substrings
+
+# df1, df2, df3 = split_dataframes_by_substrings(df, split_substrings=['row0', 'row1', 'row2'], include_unmatched=True, unmatched_in_all=True)
+# print(df1)
+# print(df2)
+# print(df3)
+
+
+# df1a, df1b, = split_dataframes_by_substrings(df1, split_substrings=['n','p'], include_unmatched=True, unmatched_in_all=True)
+# print(df1a)
+# print(df1b)
+
+
+def remove_prefix_suffix(df, column, prefix='', suffix=''):
+    """
+    Remove specified prefix and suffix from each string in a DataFrame column.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        column (str): Name of the column to process.
+        prefix (str): Prefix string to remove (if present).
+        suffix (str): Suffix string to remove (if present).
+
+    Returns:
+        pd.DataFrame: DataFrame with the processed column.
+    """
+
+    def strip_affixes(s):
+        if not isinstance(s, str):
+            return s  # Return as is if not a string
+        if prefix and s.startswith(prefix):
+            s = s[len(prefix) :]
+        if suffix and s.endswith(suffix):
+            s = s[: -len(suffix)]
+        return s
+
+    df = df.copy()
+    df[column] = df[column].apply(strip_affixes)
+    return df
+
+
+# df_shortened_names = remove_prefix_suffix(df1, column='settings',prefix='', suffix='_test1234',)
+# print(df_shortened_names)
+
+
+def normalize_split_key(split_key):
+    if split_key is None:
+        return None  # or return [] if you prefer empty list
+    if isinstance(split_key, (list, tuple)):
+        return list(split_key)  # ensure it's a list, not tuple
+    # Otherwise, assume it's a single item and wrap it in a list
+    return [split_key]
+
+
+def focal_length_visualization(
+    df,
+    variable_compared='x',
+    default_data='None',
+    directory=None,
+    x_plot_name='tornado_plot_focal_length_x.png',
+    y_plot_name='tornado_plot_focal_length_y.png',
+    deltax_plot_name='tornado_plot_focal_length_deltax.png',
+    deltay_plot_name='tornado_plot_focal_length_deltay.png',
+    remove_prefix='',
+    remove_suffix='',
+):
+
+    df = remove_prefix_suffix(df, 'settings', prefix=remove_prefix, suffix=remove_suffix)
+
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+
+    # Filter row where 'name' contains 'default'
+    # df_default = df[df['settings'].str.contains(default_key)]
+    # print("default data: \n", df_default)
+
+    if default_data == None:
+        print("default row set to none. Plots will not show differences.")
+
+        if variable_compared == 'x':
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df['settings'], df['x'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('X from first row')
+            plt.title('Tornado Plot of X relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado plot of x is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{x_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of X of focal length saved in {directory}')
+
+        if variable_compared == 'y':
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df['settings'], df['y'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Y from first row')
+            plt.title('Tornado Plot of Y relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado Plot of delta Y is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{y_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of Y of focal length saved in {directory}')
+
+        if variable_compared == 'both':
+
+            # Plot tornado plot of x
+            plt.figure(figsize=(8, 6))
+            plt.barh(df['settings'], df['x'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('X from first row')
+            plt.title('Tornado Plot of X relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado plot of x is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{x_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of X of focal length saved in {directory}')
+
+            # Plot tornado plot of y
+            plt.figure(figsize=(8, 6))
+            plt.barh(df['settings'], df['y'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Y difference from first row')
+            plt.title('Tornado Plot of Y relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado Plot of Y is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{y_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of Y of focal length saved in {directory}')
+
+    if default_data != None:
+        default_row = df[df['settings'].str.contains(default_data)].iloc[0]
+        print("default row: \n", default_row)
+
+        # Calculate deltas relative to default x and y
+        df['delta_x'] = df['x'] - default_row['x']
+        df['delta_y'] = df['y'] - default_row['y']
+        print("dataframe : \n", df)
+
+        if variable_compared == 'delta_x':
+
+            # sort data from largest to smallest
+            df_sorted = df.reindex(df['delta_x'].abs().sort_values(ascending=False).index)
+            print(df_sorted)
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df_sorted['settings'], df_sorted['delta_x'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Delta X difference from first row')
+            plt.title('Tornado Plot of Delta X relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado plot of delta x is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{deltax_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of delta x of focal length saved in {directory}')
+
+        if variable_compared == 'delta_y':
+
+            # sort data from largest to smallest
+            df_sorted = df.reindex(df['delta_y'].abs().sort_values(ascending=False).index)
+            print(df_sorted)
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df_sorted['settings'], df_sorted['delta_y'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Delta Y difference from first row')
+            plt.title('Tornado Plot of Delta Y relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado Plot of delta y is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{deltay_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of delta y of focal length saved in {directory}')
+
+        if variable_compared == 'delta':
+
+            # sort data from largest to smallest
+            df_sorted_x = df.reindex(df['delta_x'].abs().sort_values(ascending=False).index)
+            print(df_sorted_x)
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df_sorted_x['settings'], df_sorted_x['delta_x'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Delta X difference from first row')
+            plt.title('Tornado Plot of Delta X relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado plot of delta x is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{deltax_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of delta x of focal length saved in {directory}')
+
+            # sort data from largest to smallest
+            df_sorted_y = df.reindex(df['delta_y'].abs().sort_values(ascending=False).index)
+            print(df_sorted_y)
+
+            # Plot tornado plot
+            plt.figure(figsize=(8, 6))
+            plt.barh(df_sorted_y['settings'], df_sorted_y['delta_y'], color='skyblue')
+            plt.axvline(0, color='black', linewidth=0.8)  # Center line at zero
+            plt.xlabel('Delta Y difference from first row')
+            plt.title('Tornado Plot of Delta Y relative to first row')
+            plt.gca().invert_yaxis()  # Optional: invert y-axis to have first row on top
+            plt.tight_layout()
+            plt.show()
+
+            if directory == None:
+                print('Tornado Plot of delta y is not saved')
+            else:
+                os.makedirs(directory, exist_ok=True)
+                save_path = os.path.join(directory, f'{deltay_plot_name}')
+                plt.savefig(save_path, dpi=300)
+                print(f'Tornado plot of delta y of focal length saved in {directory}')
+        else:
+            print("Plot cannot be generated. set default_data to None")
+
+
+# check if focal_length_visualization function is working
+focal_length_visualization(df, default_data="0b000", variable_compared='delta_x', remove_prefix='sa_')
+print(df)
+
+default_row = df[df['settings'].str.contains('0b00')].iloc[0]
+print("default row: \n", default_row)
+# Calculate deltas relative to default x and y
+df['delta_x'] = df['x'] - default_row['x']
+df['delta_y'] = df['y'] - default_row['y']
+print("dataframe : \n", df)
+
+
+def extend_settings_column(df, column_name, print_check=False):
+    df['sign'] = None
+    df['increment'] = None
+    for i, row in df.iterrows():
+        for scale in ['n', 'p', 'b']:
+            value = row[f'{column_name}']
+            idx = value.rfind(scale)
+            if idx != -1 and idx + 1 < len(value) and value[idx + 1].isdigit():
+                sign = value[idx]
+                df.at[i, 'sign'] = sign
+                start = idx + 1
+                # Find the underscore followed by a non-digit character
+                for j in range(start, len(value) - 1):
+                    if value[j] == '_' and not value[j + 1].isdigit():
+                        end = j
+                        break
+                else:
+                    # If no such underscore found, take till end of string
+                    end = len(value)
+                increment = value[start:end].replace('_', '.', 1)
+                df.at[i, 'increment'] = increment
+                break  # stop after first valid scale found
+    df['sign'] = df['sign'].astype('category')
+    df['increment'] = df['increment'].astype('float64')
+    df.loc[df['sign'] == 'n', 'increment'] *= -1
+    if print_check == True:
+        print(df.to_string())
+    else:
+        print(df)
+
+
+extend_settings_column(df, 'settings')
+
+print(df.to_string())
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+print(sorted_df.to_string())
+sorted_df = df.sort_values(by='increment')
+print(sorted_df)
+# Data for plotting
+x = sorted_df['increment']
+y1 = sorted_df['delta_x']
+y2 = sorted_df['delta_y']
+
+fig, ax = plt.subplots()
+
+ax.plot(x, y1, color='tab:blue')
+ax.plot(x, y2, color='tab:green')
+
+ax.set(xlabel='increment (x)', ylabel='focal length (y)', title='focal length of incremental changes to x')
+ax.grid()
+
+# fig.savefig("test.png")
+plt.show()
+
+m, b = np.polyfit(x, y1, 1)
+m
+b
+focal_length_visualization(
+    df2, default_data="0b000", variable_compared='delta_y', remove_prefix='sa_', remove_suffix='_test1234'
+)
+focal_length_visualization(
+    df3, default_data="0b000", variable_compared='x', remove_prefix='sa_', remove_suffix='_test1234'
+)
+
+
+# def focal_length_viz_adj(df, default_data=None, variable_compared='x'):
+#     import matplotlib.pyplot as plt
+#     import pandas as pd
+#     import numpy as np
+
+#     # Your extraction function (adjusted to return absolute increment)
+#     def extract_sign_and_increment(setting):
+#         # Find sign character
+#         if 'p' in setting:
+#             sign = 'p'
+#             idx = setting.index('p')
+#         elif 'n' in setting:
+#             sign = 'n'
+#             idx = setting.index('n')
+#         elif 'b' in setting:
+#             sign = 'b'
+#             idx = setting.index('b')
+#         else:
+#             raise ValueError(f"Unknown sign in setting: {setting}")
+
+#         # Extract substring after sign
+#         increment_str = setting[idx + 1 :]
+
+#         # Replace underscores with decimal point
+#         increment_str = increment_str.replace('_', '.')
+
+#         # Convert to float
+#         try:
+#             increment = float(increment_str)
+#         except ValueError:
+#             # If conversion fails, fallback to 0 or raise error
+#             increment = 0.0
+#         return sign, increment
+
+#     df['sign'], df['increment'] = zip(*df['settings'].map(extract_sign_and_increment))
+
+#     # Filter out baseline row for plotting (we don't plot baseline delta)
+#     df_plot = df[df['sign'].isin(['p', 'n'])]
+
+#     # Pivot to get positive and negative deltas side-by-side by increment
+#     if default_data == None:
+#         if variable_compared == 'x':
+
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='x').fillna(0)
+#         elif variable_compared == 'y':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='y').fillna(0)
+#         else:
+#             print("You must set variable_compared to 'x' or 'y' only")
+
+#     elif default_data != None:
+#         if default_data == 'baseline':
+#             default_row = df[df['settings'].str.contains("b000")].iloc[0]
+#         else:
+#             default_row = df[df['settings'].str.contains(default_data)].iloc[0]
+#         print("default row: \n", default_row)
+#         # Calculate deltas relative to default x and y
+#         df_plot['delta_x'] = df_plot['x'] - default_row['x']
+#         df_plot['delta_y'] = df_plot['y'] - default_row['y']
+#         print("dataframe : \n", df)
+
+#         df_plot = df[df['sign'].isin(['p', 'n'])]
+
+#         if variable_compared == 'x':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='delta_x').fillna(0)
+#         elif variable_compared == 'y':
+#             pivot_df = df_plot.pivot(index='increment', columns='sign', values='delta_y').fillna(0)
+#         else:
+#             print("You must set variable_compared to 'delta_x' or 'delta_y' only")
+
+#     else:
+#         print("check default_data argument")
+#     # Sort by increment
+#     pivot_df = pivot_df.sort_index()
+
+#     # Plot tornado plot
+#     plt.figure(figsize=(10, 8))
+
+#     # Negative changes to the left (negative bars)
+#     plt.barh(pivot_df.index, -pivot_df['n'], color='salmon', label='Negative Change')
+
+#     # Positive changes to the right
+#     plt.barh(pivot_df.index, pivot_df['p'], color='skyblue', label='Positive Change')
+
+#     plt.axvline(0, color='black', linewidth=0.8)
+#     plt.xlabel(f'{variable_compared} relative to baseline')
+#     plt.ylabel('Increment')
+#     plt.title(f'Tornado Plot of {variable_compared} for Positive and Negative Changes')
+#     plt.legend()
+#     plt.gca().invert_yaxis()  # Optional: largest increment on top
+#     plt.tight_layout()
+#     plt.show()
+
+
+# focal_length_viz_adj(df1, default_data='baseline', variable_compared='delta_x')
+
+########################################## MAIN FUNCTION ##########################################
+#### DO NOT MODIFY
+
+
+def focal_length_comparison(
+    output_dir,
+    input_file_path=None,
+    file_end_key='_measurement_statistics.json',
+    save_json_filepath=False,
+    key='focal_lengths_parabolic_xy',
+    name_start='sa_',
+    name_end=None,
+    variable_compared='x',
+    default_data=None,
+    save_data=False,
+    save_plot=False,
+    split_key=None,
+    include_unmatched=False,
+    unmatched_in_all=False,
+    x_plot_image_name='tornado_plot_focal_length_x',
+    y_plot_image_name='tornado_plot_focal_length_y',
+    deltax_plot_image_name='tornado_plot_focal_length_deltax',
+    deltay_plot_image_name='tornado_plot_focal_length_deltay',
+    remove_prefix='',
+    remove_suffix='',
+):
+
+    analysis_dir = find_or_create_analysis_folder(output_dir)
+    split_key = normalize_split_key(split_key)
+
+    if input_file_path is None:
+        files = find_files(output_dir, file_end_key, save_json_filepath, file_name=None)
+        df = tabulate_data_from_files(files, key, name_start, name_end)
+        print(df)
+
+    else:
+        with open(input_file_path, mode='r', newline='', encoding='utf-8') as filepaths_csv:
+            reader = csv.reader(filepaths_csv)
+            next(reader)  # Skip the header row if necessary
+            # Extract only the first column (index 0)
+            files = [row[0] for row in reader]
+        print('focal length comparison performed on provided filepaths:', '\n', files)
+        df = tabulate_data_from_files(files, key, name_start, name_end)
+        print(df)
+
+    if save_data is True:
+        if split_key is None:
+            csv_path = os.path.join(analysis_dir, 'focal_length_comparison.csv')
+            df.to_csv(csv_path, index=False)
+            print(f"focal length data saved to {csv_path}")
+        else:
+            split_dfs = split_dataframes_by_substrings(df, split_key)
+            for i, subset_df in enumerate(split_dfs, start=1):
+                csv_file_name = f'focal_length_comparison_subset{i}.csv'
+                csv_path = os.path.join(analysis_dir, csv_file_name)
+                subset_df.to_csv(csv_path, index=False)
+                print(f"focal length subset {i} data saved to {csv_path}")
+    else:
+        if split_key is None:
+            print('focal length data not saved.')
+        else:
+            split_dfs = split_dataframes_by_substrings(df, split_key, include_unmatched, unmatched_in_all)
+            for i, subset_df in enumerate(split_dfs, start=1):
+                print(f"focal length subset {i} data below not saved.")
+                print(subset_df)
+
+    if save_plot is True:
+        if split_key is None:
+            focal_length_visualization(
+                df,
+                variable_compared,
+                default_data,
+                directory=analysis_dir,
+                x_plot_name=str(f'{x_plot_image_name}.png'),
+                y_plot_name=str(f'{y_plot_image_name}.png'),
+                deltax_plot_name=str(f'{deltax_plot_image_name}.png'),
+                deltay_plot_name=str(f'{deltay_plot_image_name}.png'),
+                remove_prefix=remove_prefix,
+                remove_suffix=remove_suffix,
+            )
+        else:
+            split_dfs = split_dataframes_by_substrings(df, split_key)
+            for i, subset_df in enumerate(split_dfs, start=1):
+                focal_length_visualization(
+                    subset_df,
+                    variable_compared,
+                    default_data,
+                    directory=analysis_dir,
+                    x_plot_name=str(f'{x_plot_image_name}_subset{i}.png'),
+                    y_plot_name=str(f'{y_plot_image_name}_subset{i}.png'),
+                    deltax_plot_name=str(f'{deltax_plot_image_name}_subset{i}.png'),
+                    deltay_plot_name=str(f'{deltay_plot_image_name}_subset{i}.png'),
+                    remove_prefix=remove_prefix,
+                    remove_suffix=remove_suffix,
+                )
+
+    else:
+        if split_key is None:
+            print('focal length plot not saved.')
+            focal_length_visualization(
+                df,
+                variable_compared,
+                default_data,
+                directory=None,
+                x_plot_name=f'{x_plot_image_name}.png',
+                y_plot_name=f'{y_plot_image_name}.png',
+                deltax_plot_name=f'{deltax_plot_image_name}.png',
+                deltay_plot_name=f'{deltay_plot_image_name}.png',
+                remove_prefix=remove_prefix,
+                remove_suffix=remove_suffix,
+            )
+        else:
+            split_dfs = split_dataframes_by_substrings(df, split_key, include_unmatched, unmatched_in_all)
+            for i, subset_df in enumerate(split_dfs, start=1):
+                print(f'focal length plot of subset {i} not saved.')
+                focal_length_visualization(
+                    subset_df,
+                    variable_compared,
+                    default_data,
+                    directory=None,
+                    x_plot_name=str(f'{x_plot_image_name}_subset{i}.png'),
+                    y_plot_name=str(f'{y_plot_image_name}_subset{i}.png'),
+                    deltax_plot_name=str(f'{deltax_plot_image_name}_subset{i}.png'),
+                    deltay_plot_name=str(f'{deltay_plot_image_name}_subset{i}.png'),
+                    remove_prefix=remove_prefix,
+                    remove_suffix=remove_suffix,
+                )
+
+
+########################################## EXECUTION OF MAIN FUNCTION ##########################################
+##### Update filepaths for the following variables #####
+
+# if focal length comparison is assessed for all focal length ouput data in output data, update output directory
+# update output directory below in which all JSON files for the SOFAST focal length output are stored.
+output_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_10_single_param_sa_o_v_cam_screen_cam/002_output"
+
+
+# after updating the directory, run the focal_length_comparisons with updated arguments.
+# See focal_length_comparisons() docstring for arguments
+
+focal_length_comparison(
+    output_dir=output_directory,
+    input_file_path=None,
+    file_end_key='_measurement_statistics.json',
+    key='focal_lengths_parabolic_xy',
+    name_end='_test1234',
+    variable_compared='delta_x',
+    default_data='0b00',
+    save_data=False,
+    save_plot=False,
+    save_json_filepath=False,
+    split_key=['row0', 'row1', 'row2'],
+    include_unmatched=True,
+    unmatched_in_all=True,
+    remove_prefix='sa_',
+    remove_suffix=None,
+)
+
+########################################## ALTERNATIVE APPROACH ##########################################
+# # uncomment lines here and below if running alternative approach (use ctrl + /)
+# # if focal length comparison is assessed for a subset of focal length filepaths--not all outputs in output directory
+#     # then first run the helper function below to compile your filepaths and
+#         # delete any rows of filepaths you do not want to analyze - do not change file name.
+
+# allfilepaths, pathlist_csvpath = find_files(output_dir= output_directory, file_end_key='_measurement_statistics.json', save_json_filepath=True, file_name= "subsetted_focal_length_file_paths")
+
+#         #make the changes you want to make to the subsetted_focal_length_file_paths.csv file in the analysis folder in your parent directory.
+#         ### note: do not change the name of the file.
+#         ##### after deleting file paths you are not interested in analyzing proceed to use the following execution program:
+# Note: you can change the default_data argument to either None or to the settings referring to a desired baseline measurement
+
+# focal_length_comparison(output_dir=output_directory, input_file_path= pathlist_csvpath, default_data= 'mdAAAn32')
