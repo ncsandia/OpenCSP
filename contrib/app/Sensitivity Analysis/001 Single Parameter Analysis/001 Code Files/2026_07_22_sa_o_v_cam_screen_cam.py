@@ -89,7 +89,6 @@ import copy
 import os
 import csv
 import subprocess
-from tqdm import tqdm
 
 ####### HELPER FUNCTIONS ######
 #### DO NOT MODIFY
@@ -424,6 +423,11 @@ def singleparametersa(
         raise KeyError(f"Expected exactly one dataset matching '{target_variable}'\n, found {len(target_path)}")
     target_path = target_path[0]
     original_values = data_dict[target_path]
+
+    # Squeeze singleton dimensions to handle single column 2D-Array
+    if isinstance(original_values, np.ndarray):
+        original_values = np.squeeze(original_values)
+
     modifications = increment_change(lower_limit, upper_limit, steps, naming_prefix, unit_sig=3)
 
     inifile_pathlist = []
@@ -476,7 +480,7 @@ def singleparametersa(
                     'file_facet': str(facet),
                     'file_measurement': str(measurement),
                     'file_calibration': str(calibration),
-                    'dir_save_root': f'{output_dir_path}/SOFAST_Results_2_{key}_row{i}',
+                    'dir_save_root': f'{output_dir_path}/SOFAST_Results_{key}_row{i}',
                 }
 
                 updated_id = {'measurement_id': measurement_id, 'post_process_id': post_process_id}
@@ -541,7 +545,7 @@ def singleparametersa(
                 'file_facet': str(facet),
                 'file_measurement': str(measurement),
                 'file_calibration': str(calibration),
-                'dir_save_root': f'{output_dir_path}/SOFAST_Results_2_{key}',
+                'dir_save_root': f'{output_dir_path}/SOFAST_Results_{key}',
             }
             updated_id = {'measurement_id': measurement_id, 'post_process_id': post_process_id}
             # create and save the ini file
@@ -579,48 +583,48 @@ def singleparametersa(
 ##### Update filepaths for the following variables #####
 
 # update parameter of interest
-target_variable = 'dist_optic_screen'
-target_variable_type = "m"
+target_variable = 'v_cam_screen_cam'
+target_variable_type = "o"
 
 # update file naming prefix. see documentation on file naming convention and parameter key list
-naming_prefix = 'mdAAA'
+naming_prefix = 'mdAAB'
 
 # update filepath for your scenario deck. File must be saved as csv.
-input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input'
+input_dir = 'C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input'
 
 # update filepath for your output directory. All modified h5 files and related generated .ini files will be stored here.
-output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output"
+output_dir = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/002_output"
 
 # update filepath for the unmodified h5 measurment input file to be used to generated newly modified h5 input file.
 sofast_measurement = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/measurement_facet.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/measurement_facet.h5"
 )
 
 # update filepath for the unmodified h5 orientation input file to be used to generated newly modified h5 input file.
-sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/spatial_orientation.h5"
+sofast_orientation = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/spatial_orientation.h5"
 
 # update filepath for the unmodified h5 camera input file to be used to generated newly modified h5 input file.
-sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/camera_sofast_downsampled.h5"
+sofast_camera = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/camera_sofast_downsampled.h5"
 
 # update filepath for the unmodified h5 display input file to be used to generated newly modified h5 input file.
-sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/display_distorted_2d.h5"
+sofast_display = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/display_distorted_2d.h5"
 
 # update filepath for the unmodified .json facet data file. This is only needed for generating filepath for facet data in .ini file.
 facet_data = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/Facet_NSTTF.json"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/Facet_NSTTF.json"
 )
 
 # update filepath for the unmodified h5 calibration file. This is only needed for generating filepath for facet data in .ini file.
 sofast_calibration = (
-    "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/001_input/image_calibration.h5"
+    "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/001_input/image_calibration.h5"
 )
 
 # update filepath for your empty .ini file to be used to generate all new .ini file for each row-wise modifications.
-input_ini_template_path = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/004_ini_files/ini_template_2_alan.ini"
+input_ini_template_path = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/004_ini_files/ini_template_2_alan.ini"
 
 # update relevant identification information for the .ini files.
-measurement_id = "20260721"
-post_process_id = "dist_optic_screen"
+measurement_id = "test20260722"
+post_process_id = "nichowd"
 
 
 # after updating file paths above, run the function below to generate new input files, .ini files, and a .ini filepath list
