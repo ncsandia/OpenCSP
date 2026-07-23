@@ -357,7 +357,7 @@ def focal_length_line_plot(df, directory, variable_compared='x', default_data=No
     ):
         fig, ax = plt.subplots()
         ax.plot(x, y, color='tab:blue')
-        ax.tick_params(axis='x', labelrotation=45, labelsize=10)
+        ax.tick_params(axis='x', labelrotation=45, labelsize=9)
         ax.tick_params(axis='x', labelsize=10)
         if y2 is not None:
             ax.plot(x, y2, color='tab:green')
@@ -475,7 +475,7 @@ def focal_length_line_plot(df, directory, variable_compared='x', default_data=No
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 x_label = (
-                    fr'incremental change $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                    fr'incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                     if len(vector_dir) == 1
                     else 'incremental change (m)'
                 )
