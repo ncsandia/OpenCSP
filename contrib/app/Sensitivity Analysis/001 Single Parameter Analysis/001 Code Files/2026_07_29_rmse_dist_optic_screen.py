@@ -66,11 +66,11 @@ def find_files(output_dir, file_end_key, save_json_filepath=False, file_name=Non
 
 # # check if find_files function is working
 
-test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/002_output"
+test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output"
 
 files, file_paths_test = find_files(
     test_directory,
-    file_end_key='slope_deviation_image_x.h5',
+    file_end_key='slope_deviation_image_xy.h5',
     save_json_filepath=True,
     file_name="pathlist_slope_deviation_x",
 )
@@ -244,9 +244,164 @@ def process_hdf5_files(file_path_list, keyword, name_start, name_end=None, compa
             rmse_df['rmse_diff'] = rmse_df['RMSE'] - default_rmse
     return rmse_df
 
-
-df = process_hdf5_files(file_path_list=files, keyword='image_x', name_start='sa_')
+for file in files:
+    print(f'{file} \n')
+df = process_hdf5_files(file_path_list=files, keyword='image', name_start='sa_', name_end= '_d')
 print(df)
+
+#########################################
+
+
+
+def rmse_line_plot(df, directory, variable_compared='x', default_data=None, xlabel=None, save_plot=False, plot_title_assigned = None):
+    def plot_focal_length(
+        x, y, legend_y, xlabel, ylabel, title, imagefile_name, y2=None, legend_y2=None, save_plot=save_plot
+    ):
+        fig, ax = plt.subplots()
+        ax.plot(x, y, color='tab:blue')
+        ax.tick_params(axis='x', labelrotation=45, labelsize=9)
+        ax.tick_params(axis='x', labelsize=10)
+        if y2 is not None:
+            ax.plot(x, y2, color='tab:green')
+            ax.legend([legend_y, legend_y2])
+        else:
+            ax.legend([legend_y])
+        ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
+        ax.grid()
+        plt.tight_layout()
+        if save_plot == True:
+            fig.savefig(f'{imagefile_name}.png')
+            save_path = os.path.join(directory, f'{imagefile_name}.png')
+            plt.savefig(save_path, dpi=300)
+            print(f'Tornado plot of Y of focal length saved in {directory}')
+        plt.show()
+
+    def process_rmse_line_plot(single_df, xlabel=xlabel, default_data=None, imagefile_name=None, plot_title_assigned=plot_title_assigned):
+        sorted_df = single_df.sort_values(by='increment')
+        print(sorted_df.to_string())
+        # Data for plotting
+        increment = sorted_df['increment']
+        rmse_value = sorted_df['RMSE']
+        if 'rmse_diff' in df.columns:
+            rmse_diff = sorted_df['rmse_diff']
+
+        plot_x_label = 'incremental change (m)' if xlabel is None else xlabel
+        plot_title_given ='Variation in RMSE (mrad)' if plot_title_assigned is None else plot_title_assigned
+
+        y = rmse_value
+        plot_y_label = fr'RMSE(mrad)'
+        plot_imagefile_name = 'rmse_line_plot'
+        plot_legend_y = fr'$f_x$'
+        plot_legend_y2 = None
+        elif variable_compared == 'y':
+            y = focal_length_y
+            plot_y_label = fr'$f_y$ (m)'
+            plot_imagefile_name = 'focal_length_line_plot_y'
+            plot_legend_y = fr'$f_y$'
+            plot_legend_y2 = None
+        elif variable_compared == 'both':
+            y = focal_length_x
+            y2 = focal_length_y
+            plot_y_label = fr'$f_x$ (m)'
+            plot_y2_label = fr'$f_y$ (m)'
+            plot_imagefile_name = 'focal_length_line_plot_x_and_y'
+            plot_legend_y = fr'$f_x$'
+            plot_legend_y2 = fr'$f_y$'
+        else:
+            if default_data is not None:
+                default_row = sorted_df[sorted_df['settings'].str.contains(default_data)].iloc[0]
+                print("default row: \n", default_row)
+
+                # Calculate deltas relative to default x and y
+                sorted_df['delta_x'] = sorted_df['x'] - default_row['x']
+                sorted_df['delta_y'] = sorted_df['y'] - default_row['y']
+
+                focal_length_delta_x = sorted_df['delta_x']
+                focal_length_delta_y = sorted_df['delta_y']
+                print(sorted_df)
+
+                if variable_compared == 'delta_x':
+                    y = focal_length_delta_x
+                    plot_y_label = fr"$\Delta$$f_x$ (m)"
+                    plot_imagefile_name = 'focal_length_line_plot_delta_x'
+                    plot_legend_y = fr'$\Delta$$f_x$'
+                    plot_legend_y2 = None
+                elif variable_compared == 'delta_y':
+                    y = focal_length_delta_y
+                    plot_y_label = fr'$\Delta$$f_y$ (m)'
+                    plot_imagefile_name = 'focal_length_line_plot_delta_y'
+                    plot_legend_y = fr'$\Delta$$f_y$'
+                    plot_legend_y2 = None
+                elif variable_compared == 'delta':
+                    y = focal_length_delta_x
+                    y2 = focal_length_delta_y
+                    plot_y_label = fr'$\Delta$$f_{{xy}}$ (m)'
+                    # plot_y2_label = fr'$f_\Deltay$'
+                    plot_imagefile_name = 'focal_length_line_plot_delta_x_and_y'
+                    plot_legend_y = fr'$\Delta$$f_x$'
+                    plot_legend_y2 = fr'$\Delta$$f_y$'
+                else:
+                    raise ValueError('incorrect argument for variable_compared.')
+            else:
+                raise ValueError('must include default_data')
+
+        if imagefile_name != None:
+            plot_imagefile_name = f'{imagefile_name}_{plot_imagefile_name}'
+        else:
+            plot_imagefile_name = plot_imagefile_name
+
+        if variable_compared == 'both' or variable_compared == 'delta':
+            plot_focal_length(
+                increment,
+                y,
+                y2=y2,
+                xlabel=plot_x_label,
+                ylabel=plot_y_label,
+                title=plot_title_given,
+                imagefile_name=plot_imagefile_name,
+                legend_y=plot_legend_y,
+                legend_y2=plot_legend_y2,
+            )
+        else:
+            plot_focal_length(
+                increment,
+                y,
+                xlabel=plot_x_label,
+                ylabel=plot_y_label,
+                title=plot_title_given,
+                imagefile_name=plot_imagefile_name,
+                legend_y=plot_legend_y,
+            )
+
+    if isinstance(df, list):
+        for i, single_df in enumerate(df):
+            if 'vector_direction' in single_df.columns:
+                vector_dir = single_df['vector_direction'].dropna().unique()
+                x_label = (
+                    fr'incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                    if len(vector_dir) == 1
+                    else 'incremental change (m)'
+                )
+                if plot_title_assigned is None:
+                    plot_title_assigned = fr'Focal Length Variation as a function of change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)' 
+                print(f"plotting with vector direction for DataFrame {i}/{len(df)}")
+                process_focal_length_plot(
+                    single_df,
+                    variable_compared,
+                    xlabel=x_label,
+                    imagefile_name=f'Focal Length Comparison_row{vector_dir[0]}',
+                    default_data=default_data,
+                )
+    else:
+        process_focal_length_plot(df, variable_compared, default_data=default_data)
+
+analysis_dir = find_or_create_analysis_folder(test_directory)
+focal_length_line_plot(df, directory=analysis_dir, 
+                       variable_compared='delta', default_data='0b00', 
+                       xlabel = fr'incremental change in distance from optic to screen $d_{{ms}}$ (m)',
+                       plot_title_assigned = fr'Focal Length Variation (m)',
+                       save_plot=True)
+
 
 
 #############################################################################################################################################
@@ -350,10 +505,6 @@ def group_stats(df, group_col):
         means.append(vals.mean())
         stds.append(vals.std())
     return groups, means, stds
-
-
-plt.tight_layout()
-plt.show()
 
 
 # 1. Bar plot: Mean RMSE by sign

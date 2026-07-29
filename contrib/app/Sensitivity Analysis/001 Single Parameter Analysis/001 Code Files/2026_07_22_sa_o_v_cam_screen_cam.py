@@ -89,6 +89,9 @@ import copy
 import os
 import csv
 import subprocess
+from tqdm import tqdm
+
+# from contrib.app.Sensitivity_Analysis
 
 ####### HELPER FUNCTIONS ######
 #### DO NOT MODIFY
@@ -685,20 +688,37 @@ def ini_terminal_execution(inifile_pathlist, python_executable_pathlist, single_
 ### PROCESS all INI File in SOFAST Process ###
 ## Testing Default INI File -- no parameter changes ##
 # the following code will process the SOFAST process file using each .ini file in the pathlist.
-for file_path in inifile_pathlist:
-    file_path = Path(file_path)
-    python_executable = r"C:/Users/nichowd/Code/env_310_OpenCSP/Scripts/python.exe"
-    cmd = [
-        python_executable,
-        "C:/Users/nichowd/Code/OpenCSP/example/sofast_fringe/single_facet/example_process_single_facet.py",
-        "--verbose",
-        "-s",
-        file_path,
-    ]
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-        print(f"Successfully processed {file_path}")
-        print("Output:", result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"Error processing {file_path}")
-        print("Error output:", e.stderr)
+# for file_path in inifile_pathlist:
+#     file_path = Path(file_path)
+#     python_executable = r"C:/Users/nichowd/Code/env_310_OpenCSP/Scripts/python.exe"
+#     cmd = [
+#         python_executable,
+#         "C:/Users/nichowd/Code/OpenCSP/example/sofast_fringe/single_facet/example_process_single_facet.py",
+#         "--verbose",
+#         "-s",
+#         file_path,
+#     ]
+#     try:
+#         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+#         print(f"Successfully processed {file_path}")
+#         print("Output:", result.stdout)
+#     except subprocess.CalledProcessError as e:
+#         print(f"Error processing {file_path}")
+#         print("Error output:", e.stderr)
+
+
+inipath = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/002_output/ini_file_paths_updated.csv"
+
+with open(inipath, mode='r', newline='', encoding='utf-8') as filepaths_csv:
+    reader = csv.reader(filepaths_csv)
+    next(reader)  # Skip the header row if necessary
+    # Extract only the first column (index 0)
+    files = [row[0] for row in reader]
+print('focal length comparison performed on provided filepaths:', '\n', files)
+
+
+ini_terminal_execution(
+    inifile_pathlist=files,
+    python_executable_pathlist="C:/Users/nichowd/Code/env_310_OpenCSP/Scripts/python.exe",
+    single_facet_process_pyfile="C:/Users/nichowd/Code/OpenCSP/example/sofast_fringe/single_facet/example_process_single_facet.py",
+)

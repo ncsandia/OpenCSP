@@ -212,7 +212,7 @@ def tabulate_data_from_hdf5_files(files, name_start='sa_', name_end='_', exclude
 
 
 df = tabulate_data_from_hdf5_files(files, name_end='_d')
-print(df.to_string())
+print(df)
 
 # settings_with_0b00 = df[df['settings'].str.contains('0b00')]
 # print(settings_with_0b00)
@@ -282,8 +282,8 @@ def extend_settings_column(df, column_name, print_check=False):
     print(df)
 
 
-# extend_settings_column(df, 'settings')
-# print(df)
+extend_settings_column(df, 'settings')
+print(df)
 
 ####################################### PLOTS #################################################
 
