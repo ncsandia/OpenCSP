@@ -352,10 +352,6 @@ def group_stats(df, group_col):
     return groups, means, stds
 
 
-plt.tight_layout()
-plt.show()
-
-
 # 1. Bar plot: Mean RMSE by sign
 groups, means, stds = group_stats(df, 'sign')
 x = np.arange(len(groups))
