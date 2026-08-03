@@ -362,56 +362,6 @@ rmse_line_plot(
 )
 
 
-def plot_rmse(
-    x, y, legend_y, xlabel, ylabel, title, imagefile_name, directory, y2=None, legend_y2=None, save_plot=False
-):
-    fig, ax = plt.subplots()
-    ax.plot(x, y, color='tab:blue')
-    ax.tick_params(axis='x', labelrotation=45, labelsize=9)
-    ax.tick_params(axis='x', labelsize=10)
-    if y2 is not None:
-        ax.plot(x, y2, color='tab:green')
-        ax.legend([legend_y, legend_y2])
-    ax.set(xlabel=xlabel, ylabel=ylabel, title=title)
-    ax.grid()
-    plt.tight_layout()
-    if save_plot == True:
-        fig.savefig(f'{imagefile_name}.png')
-        save_path = os.path.join(directory, f'{imagefile_name}.png')
-        plt.savefig(save_path, dpi=300)
-        print(f'Tornado plot of Y of focal length saved in {directory}')
-    plt.show()
-
-
-def process_rmse_line_plot(
-    single_df, xlabel=fr'incremental change in distance from optic to screen $d_{{ms}}$ (m)', plot_title_assigned=None
-):
-    sorted_df = single_df.sort_values(by='increment')
-    print(sorted_df.to_string())
-    # Data for plotting
-    increment = sorted_df['increment']
-    rmse_value = sorted_df['RMSE']
-    if 'rmse_diff' in df.columns:
-        rmse_diff = sorted_df['rmse_diff']
-
-    plot_x_label = 'incremental change (m)' if xlabel is None else xlabel
-    plot_title_given = 'Variation in RMSE (mrad)' if plot_title_assigned is None else plot_title_assigned
-    y = rmse_value
-    plot_y_label = fr'RMSE(mrad)'
-    plot_imagefile_name = 'rmse_line_plot'
-    plot_legend_y = fr'$RMSE$'
-
-    plot_rmse(
-        x=increment,
-        y=rmse_value,
-        legend_y=plot_legend_y,
-        xlabel=plot_x_label,
-        ylabel=plot_y_label,
-        title=plot_title_given,
-        imagefile_name=plot_imagefile_name,
-    )
-
-
 process_rmse_line_plot(df)
 #############################################################################################################################################
 
