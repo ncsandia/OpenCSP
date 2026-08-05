@@ -1,8 +1,58 @@
+"""
+Summary
+-------
+
+This module is for tabulating and visualizing Root Mean Squared Error (RMSE) comparisons during sensitivity analysis of SOFAST input parameters.
+
+This script performs the following steps:
+
+1. Finds and compiles a list of all slope deviation HDF5 output filepaths from SOFAST analysis in the output directory
+2. Extracts and tabulates all slope deviation data from HDF5 output files in the output directory.
+3. Calculates RMSE for each file
+3. If desired, saves tabulated data as a csv file in the parent directory under analysis folder.
+4. Generate plots for enclosed enerfy and stores it in analysis folder in the parent directory.
+
+
+Libraries
+---------
+os
+json
+h5py
+pandas
+csv
+matplotlib
+
+Examples
+--------
+To run the script, simply update the output directory file path and run the execution function:
+
+            output_directory = "C:/Users/nichowd/Desktop/single_parameter_SA/002_output/"
+
+
+Expected Outputs
+----------------
+This code can save the resulting plot images files to an analysis folder in the parent directory in the following subfolders:
+
+    enclosed_energy_diff_plot_minimal_xxx - png file that contains figure of a line plot of enclosed energy difference for each parameter
+    enclosed_energy_and_increment_diff_plot_minimal_xxx - png file that contains figure of a scatter plot of enclosed energy difference as a function of incremental changes for each parameter
+
+    Note: xxx is the image file name suffix which refers to whether the tornado plot is a plot of x, y, delta_x, or delta_y
+
+AI Acknowledgement
+------------------
+SandiaAI was used to faciliate code development and docstring documentation.
+
+
+"""
+
 import os
 import h5py
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+####################################### HELPER FUNCTIONS #################################################
+######################################### DO NOT TOUCH #################################################
 
 
 def find_or_create_analysis_folder(output_dir, return_all_dir=False):
@@ -65,11 +115,11 @@ def find_files(output_dir, file_end_key, save_json_filepath=False, file_name=Non
         return matching_files_list
 
 
-# # check if find_files function is working
+# # # check if find_files function is working
 
 test_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/002_output"
 
-files, file_paths_test = find_files(
+files, filepaths_list = find_files(
     test_directory,
     file_end_key='slope_deviation_image_xy.h5',
     save_json_filepath=True,
@@ -77,7 +127,7 @@ files, file_paths_test = find_files(
 )
 print(files)
 
-print(file_paths_test)
+print(filepaths_list)
 
 
 def extract_filename(file_path, name_start, name_end=None):
@@ -145,9 +195,19 @@ def calculate_rmse(df):
 # calculate_rmse(dataset)
 
 
-def process_hdf5_files(file_path_list, keyword, name_start, name_end=None, compare_to_baseline=True):
+def process_hdf5_files(
+    output_dir,
+    keyword,
+    name_start,
+    file_end_key='slope_deviation_image_xy.h5',
+    save_json_filepath=True,
+    file_name="pathlist_slope_deviation_xy",
+    name_end=None,
+    compare_to_baseline=True,
+):
+    files, filepaths_list = find_files(output_dir, file_end_key, save_json_filepath, file_name)
     results = []
-    for file_path in file_path_list:
+    for file_path in files:
         extracted_name = extract_filename(file_path, name_start, name_end)
         if extracted_name is None:
             extracted_name = os.path.basename(file_path)  # fallback
@@ -243,55 +303,33 @@ def process_hdf5_files(file_path_list, keyword, name_start, name_end=None, compa
             default_rmse_series = rmse_df.loc[rmse_df['settings'].str.contains("0b000", na=False), 'RMSE']
             default_rmse = default_rmse_series.iloc[0]
             rmse_df['rmse_diff'] = rmse_df['RMSE'] - default_rmse
+
     rmse_df['sign'] = rmse_df['sign'].astype('category')
     rmse_df['increment'] = rmse_df['increment'].astype('float64')
     rmse_df.loc[rmse_df['sign'] == 'n', 'increment'] *= -1
+
+    if 'vector_direction' in rmse_df.columns:
+        rmse_df = [
+            rmse_df[rmse_df['vector_direction'] == level].copy()
+            for level in rmse_df['vector_direction'].dropna().unique()
+        ]
+    print(rmse_df)
     return rmse_df
 
 
-for file in files:
-    print(f'{file} \n')
-df = process_hdf5_files(file_path_list=files, keyword='image', name_start='sa_', name_end='_d')
-print(df)
-
-#########################################
+# for file in files:
+#     print(f'{file} \n')
+# df = process_hdf5_files(file_path_list=files, keyword='image', name_start='sa_', name_end='_d')
+# print(df)
 
 
-def split_dataframes_by_substrings(df, split_substrings, include_unmatched=False, unmatched_in_all=False):
-    """
-    Split DataFrame into multiple DataFrames, each containing rows where 'settings' contains one of the substrings.
+####################################### UPDATE DIRECTORY TO RUN PLOTS #################################################
 
-    Args:
-        df (pd.DataFrame): The DataFrame to split.
-        split_substrings (list): List of substrings to filter by.
+output_directory = "C:/Users/nichowd/Desktop/Experiments/2026_07_22_single_param_sa_o_v_cam_screen_cam/002_output"
+analysis_folder = find_or_create_analysis_folder(output_directory)
+df = process_hdf5_files(output_dir=output_directory, keyword='image', name_start='sa_', name_end='_nichowd')
 
-    Returns:
-        list of pd.DataFrame: List of DataFrames corresponding to each substring.
-    """
-    matched_mask = pd.Series(False, index=df.index)
-    dfs = []
-    for sub in split_substrings:
-        subset_df = df[df['settings'].str.contains(sub, na=False)].copy()
-        dfs.append(subset_df)
-        matched_mask |= df.index.isin(subset_df.index)
-    unmatched_df = df[~matched_mask].copy()
-
-    if include_unmatched and not unmatched_df.empty:
-        if unmatched_in_all:
-            dfs = [pd.concat([subset, unmatched_df]).drop_duplicates() for subset in dfs]
-        else:
-            dfs.append(unmatched_df)
-        return dfs
-    else:
-        return dfs
-
-
-# check if dataframe can be split using substrings
-
-dfs = split_dataframes_by_substrings(
-    df, split_substrings=['row0', 'row1', 'row2'], include_unmatched=True, unmatched_in_all=True
-)
-print(dfs)
+####################################### RMSE PLOT #################################################
 
 
 def rmse_line_plot(
@@ -317,15 +355,7 @@ def rmse_line_plot(
             print(f'RMSE plot saved in {output_dir}')
         plt.show()
 
-    def process_rmse_line_plot(single_df):
-        sorted_df = single_df.sort_values(by='increment')
-        print(sorted_df.to_string())
-        # Data for plotting
-        increment = sorted_df['increment']
-        rmse_value = sorted_df['RMSE']
-        if 'rmse_diff' in sorted_df.columns:
-            rmse_diff = sorted_df['rmse_diff']
-
+    def process_rmse_line_plot(df):
         plot_x_label = 'incremental change (m)' if xlabel is None else xlabel
         plot_title_given = 'Variation in RMSE (mrad)' if plot_title_assigned is None else plot_title_assigned
         plot_y_label = fr'RMSE(mrad)'
@@ -335,6 +365,13 @@ def rmse_line_plot(
         if isinstance(df, list):
             for i, single_df in enumerate(df):
                 if 'vector_direction' in single_df.columns:
+                    sorted_df = single_df.sort_values(by='increment')
+                    print(sorted_df.to_string())
+                    # Data for plotting
+                    increment = sorted_df['increment']
+                    rmse_value = sorted_df['RMSE']
+                    if 'rmse_diff' in sorted_df.columns:
+                        rmse_diff = sorted_df['rmse_diff']
                     vector_dir = single_df['vector_direction'].dropna().unique()
                     x_label = (
                         fr'incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
@@ -342,9 +379,14 @@ def rmse_line_plot(
                         else 'incremental change (m)'
                     )
                     if plot_title_assigned is None:
-                        plot_title_assigned_vectorized = fr'Focal Length Variation as a function of change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                        plot_title_assigned_vectorized = str(
+                            'Focal Length Variation as a function of change in the'
+                            + '\n'
+                            + fr'camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                        )
 
-                    plot_imagefile_name_vectorized = fr'plot_imagefile_name = rmse_line_plot_{{vector_dir[0]}}'
+                    plot_imagefile_name_vectorized = f'rmse_line_plot_{vector_dir[0]}'
+
                     print(f"plotting with vector direction for DataFrame {i}/{len(df)}")
                     plot_rmse(
                         x=increment,
@@ -359,7 +401,17 @@ def rmse_line_plot(
                         save_plot=save_plot,
                         output_dir=directory,
                     )
+                else:
+                    print('dataset is a list of dataframe without vector reference. check dataset and rerun.')
+
         else:
+            sorted_df = df.sort_values(by='increment')
+            print(sorted_df.to_string())
+            # Data for plotting
+            increment = sorted_df['increment']
+            rmse_value = sorted_df['RMSE']
+            if 'rmse_diff' in sorted_df.columns:
+                rmse_diff = sorted_df['rmse_diff']
             plot_rmse(
                 x=increment,
                 y=rmse_value,
@@ -377,6 +429,4 @@ def rmse_line_plot(
     process_rmse_line_plot(df)
 
 
-analysis_dir = find_or_create_analysis_folder(test_directory)
-
-rmse_line_plot(df, directory=analysis_dir, xlabel=None, save_plot=True)
+rmse_line_plot(df, directory=analysis_folder, xlabel=None, save_plot=True)
