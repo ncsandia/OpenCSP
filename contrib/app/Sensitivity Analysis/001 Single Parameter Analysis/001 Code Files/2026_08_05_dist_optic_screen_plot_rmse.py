@@ -442,4 +442,13 @@ def rmse_line_plot(
     process_rmse_line_plot(df)
 
 
-rmse_line_plot(df, directory=analysis_folder, xlabel=None, save_plot=True, ylim=(0.45, 0.75))
+rmse_line_plot(
+    df,
+    directory=analysis_folder,
+    xlabel=fr'Incremental change in distance from optic to screen $d_{{ms}}$ (m)',
+    plot_title_assigned=str(
+        'RMSE as a function of' + '\n' + fr'change in the distance from optic to screen $d_{{ms}}$ (m)'
+    ),
+    save_plot=True,
+    ylim=(0.45, 0.75),
+)

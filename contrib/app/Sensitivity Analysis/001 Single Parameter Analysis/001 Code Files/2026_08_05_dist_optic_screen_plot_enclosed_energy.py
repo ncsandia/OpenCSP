@@ -343,9 +343,9 @@ def plot_enclosed_energy_curve(df, default_data_key='0b00', xlim=None, ylim=None
 
     def enclosed_energy_plot(
         df,
-        plot_x_label='Reciever Widths (m)',
+        plot_x_label='Reciever Width (m)',
         plot_y_label='Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
     ):
 
         plt.figure(figsize=(10, 6))
@@ -393,7 +393,7 @@ def plot_enclosed_energy_curve(df, default_data_key='0b00', xlim=None, ylim=None
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -412,9 +412,9 @@ plot_enclosed_energy_curve(dfs)
 def plot_enclosed_energy_curve_2(df, default_data_key='0b00', xlim=None, ylim=None):
     def enclosed_energy_curve_plot_2(
         df,
-        plot_x_label='Reciever Widths (m)',
+        plot_x_label='Reciever Width (m)',
         plot_y_label='Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
     ):
         plt.figure(figsize=(10, 6))
         # Separate settings with '0b00' and others
@@ -475,7 +475,7 @@ def plot_enclosed_energy_curve_2(df, default_data_key='0b00', xlim=None, ylim=No
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -495,9 +495,9 @@ plot_enclosed_energy_curve_2(dfs)
 def plot_enclosed_energy_curve_3(df, default_data_key='0b00', xlim=None, ylim=None):
     def enclosed_energy_curve_plot_3(
         df,
-        plot_x_label='Reciever Widths (m)',
+        plot_x_label='Reciever Width (m)',
         plot_y_label='Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
     ):
         plt.figure(figsize=(10, 6))
 
@@ -548,7 +548,7 @@ def plot_enclosed_energy_curve_3(df, default_data_key='0b00', xlim=None, ylim=No
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -567,9 +567,9 @@ plot_enclosed_energy_curve_3(dfs)
 def plot_energy_value_diff(df, xlim=None, ylim=None):
     def energy_value_diff_plot1(
         df,
-        plot_x_label='Reciever Widths (m)',
+        plot_x_label='Reciever Width (m)',
         plot_y_label='Difference in Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
     ):
         plt.figure(figsize=(10, 6))
 
@@ -599,7 +599,7 @@ def plot_energy_value_diff(df, xlim=None, ylim=None):
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -626,9 +626,9 @@ plot_energy_value_diff(dfs)
 #         df,
 #         xlim = None,
 #         ylim = None
-#         plot_x_label='Reciever Widths (m)',
+#         plot_x_label='Reciever Width (m)',
 #         plot_y_label='Difference in Enclosed Energy (fraction)',
-#         plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+#         plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
 #     ):
 #         plt.figure(figsize=(10, 6))
 
@@ -670,7 +670,7 @@ plot_energy_value_diff(dfs)
 #             if 'vector_direction' in single_df.columns:
 #                 vector_dir = single_df['vector_direction'].dropna().unique()
 #                 plot_title_updated = str(
-#                     'Enclosed Energy as a Function of Reciever Widths'
+#                     'Enclosed Energy as a Function of Reciever Width'
 #                     + '\n'
 #                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
 #                 )
@@ -694,9 +694,9 @@ plot_energy_value_diff(dfs)
 #     def energy_value_diff_plot_3(df,
 #                                  xlim = None,
 #                                  ylim = None,
-#                                  plot_x_label= 'Reciever Widths (m)',
+#                                  plot_x_label= 'Reciever Width (m)',
 #                                  plot_y_label= 'Difference in Enclosed Energy (fraction)',
-#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Widths'):
+#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Width'):
 
 #         plt.figure(figsize=(10, 6))
 
@@ -750,7 +750,7 @@ plot_energy_value_diff(dfs)
 #             if 'vector_direction' in single_df.columns:
 #                 vector_dir = single_df['vector_direction'].dropna().unique()
 #                 plot_title_updated = str(
-#                     'Enclosed Energy as a Function of Reciever Widths'
+#                     'Enclosed Energy as a Function of Reciever Width'
 #                     + '\n'
 #                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
 #                     )
@@ -770,9 +770,9 @@ plot_energy_value_diff(dfs)
 #     def energy_value_diff_plot_4(df,
 #                                  xlim = None,
 #                                  ylim = None,
-#                                  plot_x_label= 'Reciever Widths (m)',
+#                                  plot_x_label= 'Reciever Width (m)',
 #                                  plot_y_label= 'Difference in Enclosed Energy (fraction)',
-#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Widths'):
+#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Width'):
 #         plt.figure(figsize=(10, 6))
 
 #         magnitudes = [0.01 * i for i in range(1, 6)]
@@ -844,7 +844,7 @@ plot_energy_value_diff(dfs)
 #             if 'vector_direction' in single_df.columns:
 #                 vector_dir = single_df['vector_direction'].dropna().unique()
 #                 plot_title_updated = str(
-#                     'Enclosed Energy as a Function of Reciever Widths'
+#                     'Enclosed Energy as a Function of Reciever Width'
 #                     + '\n'
 #                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
 #                     )
@@ -864,9 +864,9 @@ plot_energy_value_diff(dfs)
 #     def energy_value_diff_plot_5(df,
 #                                  xlim = None,
 #                                  ylim = None,
-#                                  plot_x_label= 'Reciever Widths (m)',
+#                                  plot_x_label= 'Reciever Width (m)',
 #                                  plot_y_label= 'Difference in Enclosed Energy (fraction)',
-#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Widths'):
+#                                  plot_title= 'Difference in Enclosed Energy as a Function of Reciever Width'):
 
 #         plt.figure(figsize=(10, 6))
 
@@ -935,7 +935,7 @@ plot_energy_value_diff(dfs)
 #             if 'vector_direction' in single_df.columns:
 #                 vector_dir = single_df['vector_direction'].dropna().unique()
 #                 plot_title_updated = str(
-#                     'Enclosed Energy as a Function of Reciever Widths'
+#                     'Enclosed Energy as a Function of Reciever Width'
 #                     + '\n'
 #                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
 #                     )
@@ -955,9 +955,9 @@ def plot_energy_value_diff_6(
     colorgrading='twilight_shifted',
     xlim=None,
     ylim=None,
-    plot_x_label='Reciever Widths (m)',
+    plot_x_label='Reciever Width (m)',
     plot_y_label='Difference in Enclosed Energy (fraction)',
-    plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+    plot_title='Difference in Enclosed Energy as a Function of Reciever Width',
 ):
 
     def energy_value_diff_plot_6(df, plot_title=plot_title):
@@ -1040,7 +1040,7 @@ def plot_energy_value_diff_6(
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -1063,9 +1063,11 @@ def plot_energy_value_diff_7(df, output_dir, colorgrading='Spectral', xlim=None,
         save_plot=save_plot,
         colored_increments=None,
         imagefile_name='enclosed_energy_diff_plot_minimal',
-        plot_x_label='Reciever Widths (m)',
+        plot_x_label='Reciever Width (m)',
         plot_y_label='Difference in Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title=str(
+            'Enclosed Energy as a Function of Reciever Width' + '\n' + fr'and Mirror to Screen Distance $d_{{ms}} (m)$'
+        ),
     ):
 
         plt.figure(figsize=(10, 6))
@@ -1151,7 +1153,7 @@ def plot_energy_value_diff_7(df, output_dir, colorgrading='Spectral', xlim=None,
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
@@ -1180,9 +1182,13 @@ def plot_increment_vs_energy_diff(df, output_dir, save_plot=False, imagefile_nam
     def increment_vs_energy_diff_plot1(
         df,
         output_dir=output_dir,
-        plot_x_label='Increment Change (m)',
+        plot_x_label=fr'Incremental change in the Mirror to Screen Distance $d_{{ms}}$ (m)',
         plot_y_label='Difference in Enclosed Energy (fraction)',
-        plot_title='Difference in Enclosed Energy as a Function of Reciever Widths',
+        plot_title=str(
+            'Difference in Enclosed Energy as a Function of Increment Change in'
+            + '\n'
+            + fr'Mirror to Screen Distance $d_{{ms}}$ (Energy Width between 0.48 to 0.51) (m)'
+        ),
         imagefile_name=imagefile_name,
         save_plot=save_plot,
     ):
@@ -1253,10 +1259,12 @@ def plot_increment_vs_energy_diff_2(df, output_dir, xlim=None, ylim=None, save_p
 
     def increment_vs_energy_diff_plot2(
         df,
-        plot_x_label='Increment Change (m)',
-        plot_y_label='Difference in Enclosed Energy',
+        plot_x_label=fr'Incremental change in the Mirror to Screen Distance $d_{{ms}}$ (m)',
+        plot_y_label='Difference in Enclosed Energy (fraction)',
         plot_title=str(
-            'Difference in Enclosed Energy as' + '\n' + 'a Function of Increment (Energy Widths 0.48 to 0.51)'
+            'Difference in Enclosed Energy as a Function of Increment Change in'
+            + '\n'
+            + fr'Mirror to Screen Distance $d_{{ms}}$ (Energy Width between 0.48 to 0.51) (m)'
         ),
         save_plot=save_plot,
     ):
@@ -1282,7 +1290,7 @@ def plot_increment_vs_energy_diff_2(df, output_dir, xlim=None, ylim=None, save_p
             plt.ylim(ylim)
         plt.xlabel('Increment')
         plt.ylabel('Energy Value Difference')
-        plt.title('Energy Value Difference vs Increment (Energy Widths 0.48 to 0.51)')
+        plt.title('Energy Value Difference vs Increment (Energy Width between 0.48 to 0.51)')
         plt.xlabel(plot_x_label)
         plt.ylabel(plot_y_label)
         plt.title(plot_title)
@@ -1303,11 +1311,11 @@ def plot_increment_vs_energy_diff_2(df, output_dir, xlim=None, ylim=None, save_p
             if 'vector_direction' in single_df.columns:
                 vector_dir = single_df['vector_direction'].dropna().unique()
                 plot_title_updated = str(
-                    'Enclosed Energy as a Function of Reciever Widths'
+                    'Enclosed Energy as a Function of Reciever Width'
                     + '\n'
                     + fr'and camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 )
-                x_label = fr'incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                x_label = fr'Incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                 imagefile_name_vectorized = fr'enclosed_energy_and_increment_diff_fitted_plot_${{{vector_dir[0]}}}$'
                 if imagefile_name is None:
                     imagefile_name = imagefile_name_vectorized

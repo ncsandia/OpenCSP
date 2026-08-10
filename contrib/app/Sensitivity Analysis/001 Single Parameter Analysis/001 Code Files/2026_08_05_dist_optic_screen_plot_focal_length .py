@@ -560,7 +560,9 @@ focal_length_comparison(
     ylim=(-16, 16),
     xlabel=fr'Incremental change in distance from optic to screen $d_{{ms}}$ (m)',
     plot_title_assigned=str(
-        'Focal Length Variation as a function of' + '\n' + fr'distance from optic to screen $d_{{ms}}$ (m)'
+        'Focal Length Variation as a function of'
+        + '\n'
+        + fr'change in the distance from optic to screen $d_{{ms}}$ (m)'
     ),
 )
 

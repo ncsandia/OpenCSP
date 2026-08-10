@@ -350,14 +350,22 @@ def calculate_rmse(df):
 
 ########################################## EXECUTION FUNCTIONS ##########################################
 # output data directory
+
 dist_optic_screen_output_dir = (
     "C:/Users/nichowd/Desktop/Experiments/2026_07_21_single_param_sa_m_dist_optic_screen/002_output"
 )
 
+
 # Focal Length
-
-
-def tornado_plot_data(output_dir, name_start='sa_', name_end='_', default_setting_substring='0b000'):
+def tornado_plot_data(
+    output_dir,
+    name_start='sa_',
+    name_end='_',
+    increments_to_filter=[-0.05, 0.05, 0.05],
+    default_setting_substring='0b000',
+    energy_width_min=0.48,
+    energy_width_max=0.51,
+):
 
     def focal_length_data(
         focal_length_dir,
@@ -522,9 +530,7 @@ def tornado_plot_data(output_dir, name_start='sa_', name_end='_', default_settin
     main_df = pd.merge(focal_length_df, enclosed_energy_df, on='settings')
     main_df = pd.merge(main_df, rmse_df, on='settings')
 
-    def calculate_deltas(
-        df, increments_to_filter=[-0.05, 0.00, 0.05], default_setting_substring=default_setting_substring
-    ):
+    def calculate_deltas(df, increments_to_filter, default_setting_substring, energy_width_min, energy_width_max):
         # Filter the default data (baseline)
         default_df = df[df['settings'].str.contains(default_setting_substring)].copy()
 
@@ -544,14 +550,24 @@ def tornado_plot_data(output_dir, name_start='sa_', name_end='_', default_settin
         merged_df['delta_y'] = merged_df['y'] - merged_df['y_default']
         merged_df['delta_energy'] = merged_df['energy_values'] - merged_df['energy_values_default']
 
+        # Filter merged_df to only rows where energy_widths is within the specified range
+        filtered_energy_df = merged_df[
+            (merged_df['energy_widths'] >= energy_width_min) & (merged_df['energy_widths'] <= energy_width_max)
+        ].copy()
+
+        # Calculate delta_energy only on this filtered subset
+        filtered_energy_df['delta_energy'] = (
+            filtered_energy_df['energy_values'] - filtered_energy_df['energy_values_default']
+        )
+
         # Optionally drop the default columns after calculation
-        merged_df.drop(columns=['x_default', 'y_default', 'energy_values_default'], inplace=True)
+        filtered_energy_df.drop(columns=['x_default', 'y_default', 'energy_values_default'], inplace=True)
 
-        return merged_df
+        return filtered_energy_df
 
-    filtered_with_deltas = calculate_deltas(main_df, increments_to_filter=[-0.05, 0.00, 0.05])
-    print(filtered_with_deltas)
-    return filtered_with_deltas
+    df = calculate_deltas(main_df, increments_to_filter, default_setting_substring, energy_width_min, energy_width_max)
+
+    return df
 
 
 dist_optic_screen_data = tornado_plot_data(dist_optic_screen_output_dir, name_start='sa_', name_end='_d')
@@ -565,418 +581,140 @@ v_cam_screen_cam_data = tornado_plot_data(v_cam_screen_cam_output_dir, name_star
 df = pd.concat([dist_optic_screen_data, v_cam_screen_cam_data], axis=0)
 print(df)
 
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+print(df['param_row'].unique())
+########################################## PLOTTING FUNCTIONS ##########################################
+### Update plot titles and axis labels below BEFORE running plotting function
+
+metrics_plot_title = {
+    'RMSE': 'RMSE Comparison for Parameter Measure Difference of .05 m',
+    'delta_x': 'Focal Length Difference of X for Parameter Measure Difference of .05 m ',
+    'delta_y': 'Focal Length Difference of Y for Parameter Measure Difference of .05 m ',
+    'delta_energy': str('Change in Enclosed Energy (fraction)' + '\n' + '(at Receiver Width between .48 m and .51 m)'),
+}
+
+metric_plot_x_axis = {
+    'RMSE': 'RMSE (mrad)',
+    'delta_x': 'Difference in focal length of X (m)',
+    'delta_y': 'Difference in focal length of Y (m)',
+    'delta_energy': 'Difference in Enclosed Energy (fraction)',
+}
+
+metric_plot_y_axis = {
+    'RMSE': 'Parameters',
+    'delta_x': 'Parameter and Row Combination',
+    'delta_y': 'Parameter and Row Combination',
+    'delta_energy': 'Parameter and Row Combination',
+}
+
+param_row_label_map = {
+    'mdAAA_nan': str(fr'$\Delta$' + fr'$d_{{ms}}$'),
+    'mdAAB_0.0': str(fr'$\Delta$' + fr'$\vec{{v}}_{{x_{{cs}}}}$'),
+    'mdAAB_1.0': str(fr'$\Delta$' + fr'$\vec{{v}}_{{y_{{cs}}}}$'),
+    'mdAAB_2.0': str(fr'$\Delta$' + fr'$\vec{{v}}_{{z_{{cs}}}}$'),
+}
 
 
-def plot_tornado(df):
-    # Group by 'param' and 'increment', calculate mean of required columns
+def plot_tornado_by_param_row(df, metrics_plot_title, metric_plot_x_axis, param_row_label_map):
+    # Create combined param_row column
+    df['param_row'] = df['param'].astype(str) + '_' + df['row'].astype(str)
+
+    # Group by 'param_row' and 'increment', calculate mean of required columns
     grouped = (
-        df.groupby(['param', 'increment'])
-        .agg({'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean', 'RMSE': 'mean'})
+        df.groupby(['param_row', 'increment'])
+        .agg({'RMSE': 'mean', 'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean'})
         .reset_index()
     )
 
-    metrics = ['delta_x', 'delta_y', 'delta_energy', 'RMSE']
-    params = grouped['param'].unique()
+    metrics = ['RMSE', 'delta_x', 'delta_y', 'delta_energy']
 
-    for param in params:
-        param_data = grouped[grouped['param'] == param]
+    for metric in metrics:
+        # Prepare data for left and right increments
+        left_data = grouped[grouped['increment'] == -0.05][['param_row', metric]].set_index('param_row')
+        right_data = grouped[grouped['increment'] == 0.05][['param_row', metric]].set_index('param_row')
 
-        left_data = param_data[param_data['increment'] == -0.05]
-        right_data = param_data[param_data['increment'] == 0.05]
+        # Get all unique param_row combos
+        all_param_rows = sorted(set(left_data.index).union(right_data.index))
 
-        left_vals = []
-        right_vals = []
-        for metric in metrics:
-            left_val = left_data[metric].values[0] if not left_data.empty else 0
-            right_val = right_data[metric].values[0] if not right_data.empty else 0
-            left_vals.append(left_val)
-            right_vals.append(right_val)
+        # Reindex and fill missing with 0
+        left_vals = left_data.reindex(all_param_rows).fillna(0)[metric].values
+        right_vals = right_data.reindex(all_param_rows).fillna(0)[metric].values
 
-        y_pos = np.arange(len(metrics))
+        # Calculate max absolute change per param_row for sorting
+        max_abs_change = np.maximum(np.abs(left_vals), np.abs(right_vals))
 
-        fig, ax = plt.subplots(figsize=(8, 5))
+        # Sort indices by descending max_abs_change
+        sorted_indices = np.argsort(-max_abs_change)
+
+        # Apply sorting
+        sorted_param_rows = [all_param_rows[i] for i in sorted_indices]
+        left_vals_sorted = left_vals[sorted_indices]
+        right_vals_sorted = right_vals[sorted_indices]
+
+        y_pos = np.arange(len(sorted_param_rows))
+
+        fig, ax = plt.subplots(
+            figsize=(12, max(6, len(sorted_param_rows) * 0.3))
+        )  # height scales with number of param_row combos
 
         # Plot bars for increment = -0.05 (left side)
-        for i, val in enumerate(left_vals):
+        for i, val in enumerate(left_vals_sorted):
             color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], -abs(val), left=0, color=color)  # always extend left
+            ax.barh(y_pos[i], -abs(val), left=0, color=color)
 
         # Plot bars for increment = 0.05 (right side)
-        for i, val in enumerate(right_vals):
+        for i, val in enumerate(right_vals_sorted):
             color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], abs(val), left=0, color=color)  # always extend right
+            ax.barh(y_pos[i], abs(val), left=0, color=color)
 
         ax.axvline(0, color='black', linewidth=0.8)
         ax.set_yticks(y_pos)
-        ax.set_yticklabels(metrics)
-        ax.set_xlabel('Average Value')
-        ax.set_title(f'Tornado Plot for param = {param}')
-
-        # Legend for colors
-        from matplotlib.patches import Patch
-
-        legend_elements = [
-            Patch(facecolor='tab:blue', label='Positive Value'),
-            Patch(facecolor='tab:red', label='Negative Value'),
-        ]
-        ax.legend(handles=legend_elements, loc='best')
-
-        plt.tight_layout()
-        plt.show()
-
-
-# Example usage:
-plot_tornado(df)
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-
-def plot_tornado(df):
-    # Group by 'param' and 'increment', calculate mean of required columns
-    grouped = (
-        df.groupby(['param', 'increment'])
-        .agg({'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean', 'RMSE': 'mean'})
-        .reset_index()
-    )
-
-    metrics = ['delta_x', 'delta_y', 'delta_energy', 'RMSE']
-    params = grouped['param'].unique()
-
-    for param in params:
-        param_data = grouped[grouped['param'] == param]
-
-        left_data = param_data[param_data['increment'] == -0.05]
-        right_data = param_data[param_data['increment'] == 0.05]
-
-        left_vals = []
-        right_vals = []
-        for metric in metrics:
-            left_val = left_data[metric].values[0] if not left_data.empty else 0
-            right_val = right_data[metric].values[0] if not right_data.empty else 0
-            left_vals.append(left_val)
-            right_vals.append(right_val)
-
-        y_pos = np.arange(len(metrics))
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-
-        # Plot bars for increment = -0.05 (left side)
-        for i, val in enumerate(left_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], -abs(val), left=0, color=color)  # always extend left
-
-        # Plot bars for increment = 0.05 (right side)
-        for i, val in enumerate(right_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], abs(val), left=0, color=color)  # always extend right
-
-        ax.axvline(0, color='black', linewidth=0.8)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(metrics)
-        ax.set_xlabel('Average Value')
-        ax.set_title(f'Tornado Plot for param = {param}')
-
-        # Add labels for increments on left and right sides
-        xlim = ax.get_xlim()
-        ylim = ax.get_ylim()
-        # Place left label near left edge, vertically centered
-        ax.text(xlim[0] * 0.95, ylim[1] + 0.3, '-0.05 increment', ha='left', va='bottom', fontsize=10, color='black')
-        # Place right label near right edge, vertically centered
-        ax.text(xlim[1] * 0.95, ylim[1] + 0.3, '0.05 increment', ha='right', va='bottom', fontsize=10, color='black')
-
-        # Legend for colors
-        from matplotlib.patches import Patch
-
-        legend_elements = [
-            Patch(facecolor='tab:blue', label='Positive Value'),
-            Patch(facecolor='tab:red', label='Negative Value'),
-        ]
-        ax.legend(handles=legend_elements, loc='best')
-
-        plt.tight_layout()
-        plt.show()
-
-
-# Example usage:
-plot_tornado(df)
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-
-def plot_tornado(df):
-    # Group by 'param' and 'increment', calculate mean of required columns
-    grouped = (
-        df.groupby(['param', 'increment'])
-        .agg({'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean', 'RMSE': 'mean'})
-        .reset_index()
-    )
-
-    metrics = ['delta_x', 'delta_y', 'delta_energy', 'RMSE']
-    params = grouped['param'].unique()
-
-    for param in params:
-        param_data = grouped[grouped['param'] == param]
-
-        left_data = param_data[param_data['increment'] == -0.05]
-        right_data = param_data[param_data['increment'] == 0.05]
-
-        left_vals = []
-        right_vals = []
-        for metric in metrics:
-            left_val = left_data[metric].values[0] if not left_data.empty else 0
-            right_val = right_data[metric].values[0] if not right_data.empty else 0
-            left_vals.append(left_val)
-            right_vals.append(right_val)
-
-        y_pos = np.arange(len(metrics))
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-
-        # Plot bars for increment = -0.05 (left side)
-        for i, val in enumerate(left_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            bar = ax.barh(y_pos[i], -abs(val), left=0, color=color)  # always extend left
-            # Add text label to the left of the bar end
-            ax.text(
-                -abs(val) - 0.01 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
-                y_pos[i],
-                f'{val:.3f}',
-                va='center',
-                ha='right',
-                color=color,
-                fontsize=9,
-            )
-
-        # Plot bars for increment = 0.05 (right side)
-        for i, val in enumerate(right_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            bar = ax.barh(y_pos[i], abs(val), left=0, color=color)  # always extend right
-            # Add text label to the right of the bar end
-            ax.text(
-                abs(val) + 0.01 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
-                y_pos[i],
-                f'{val:.3f}',
-                va='center',
-                ha='left',
-                color=color,
-                fontsize=9,
-            )
-
-        ax.axvline(0, color='black', linewidth=0.8)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(metrics)
-
-        # Custom x-axis labels for left and right sides
-        xlim = ax.get_xlim()
-        ax.set_xticks([xlim[0], 0, xlim[1]])
-        ax.set_xticklabels([r'-0.05 increment', '0', r'0.05 increment'])
-
-        ax.set_title(f'Tornado Plot for param = {param}')
-
-        # Legend for colors
-        from matplotlib.patches import Patch
-
-        legend_elements = [
-            Patch(facecolor='tab:blue', label='Positive Value'),
-            Patch(facecolor='tab:red', label='Negative Value'),
-        ]
-        ax.legend(handles=legend_elements, loc='best')
-
-        plt.tight_layout()
-        plt.show()
-
-
-# Example usage:
-plot_tornado(df)
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-
-def plot_tornado(df):
-    # Group by 'param' and 'increment', calculate mean of required columns
-    grouped = (
-        df.groupby(['param', 'increment'])
-        .agg({'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean', 'RMSE': 'mean'})
-        .reset_index()
-    )
-
-    metrics = ['delta_x', 'delta_y', 'delta_energy', 'RMSE']
-    params = grouped['param'].unique()
-
-    for param in params:
-        param_data = grouped[grouped['param'] == param]
-
-        left_data = param_data[param_data['increment'] == -0.05]
-        right_data = param_data[param_data['increment'] == 0.05]
-
-        left_vals = []
-        right_vals = []
-        for metric in metrics:
-            left_val = left_data[metric].values[0] if not left_data.empty else 0
-            right_val = right_data[metric].values[0] if not right_data.empty else 0
-            left_vals.append(left_val)
-            right_vals.append(right_val)
-
-        y_pos = np.arange(len(metrics))
-
-        fig, ax = plt.subplots(figsize=(8, 5))
-
-        # Plot bars for increment = -0.05 (left side)
-        for i, val in enumerate(left_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            bar = ax.barh(y_pos[i], -abs(val), left=0, color=color)  # always extend left
-            # Add text label to the left of the bar end
-            ax.text(
-                -abs(val) - 0.01 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
-                y_pos[i],
-                f'{val:.3f}',
-                va='center',
-                ha='right',
-                color=color,
-                fontsize=9,
-            )
-
-        # Plot bars for increment = 0.05 (right side)
-        for i, val in enumerate(right_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            bar = ax.barh(y_pos[i], abs(val), left=0, color=color)  # always extend right
-            # Add text label to the right of the bar end
-            ax.text(
-                abs(val) + 0.01 * (ax.get_xlim()[1] - ax.get_xlim()[0]),
-                y_pos[i],
-                f'{val:.3f}',
-                va='center',
-                ha='left',
-                color=color,
-                fontsize=9,
-            )
-
-        ax.axvline(0, color='black', linewidth=0.8)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(metrics)
-
-        # Custom x-axis labels for left and right sides
-        xlim = ax.get_xlim()
-        ax.set_xticks([xlim[0], 0, xlim[1]])
-        ax.set_xticklabels([r'-0.05 increment', '0', r'0.05 increment'])
-
-        ax.set_title(f'Tornado Plot for param = {param}')
-
-        # Legend for colors
-        from matplotlib.patches import Patch
-
-        legend_elements = [
-            Patch(facecolor='tab:blue', label='Positive Value'),
-            Patch(facecolor='tab:red', label='Negative Value'),
-        ]
-        ax.legend(handles=legend_elements, loc='best')
-
-        plt.tight_layout()
-        plt.show()
-
-
-# Example usage:
-plot_tornado(df)
-
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
-
-
-def plot_tornado(df):
-    # Group by 'param' and 'increment', calculate mean of required columns
-    grouped = (
-        df.groupby(['param', 'increment'])
-        .agg({'delta_x': 'mean', 'delta_y': 'mean', 'delta_energy': 'mean', 'RMSE': 'mean'})
-        .reset_index()
-    )
-
-    metrics = ['delta_x', 'delta_y', 'delta_energy', 'RMSE']
-    params = grouped['param'].unique()
-
-    for param in params:
-        param_data = grouped[grouped['param'] == param]
-
-        left_data = param_data[param_data['increment'] == -0.05]
-        right_data = param_data[param_data['increment'] == 0.05]
-
-        left_vals = []
-        right_vals = []
-        for metric in metrics:
-            left_val = left_data[metric].values[0] if not left_data.empty else 0
-            right_val = right_data[metric].values[0] if not right_data.empty else 0
-            left_vals.append(left_val)
-            right_vals.append(right_val)
-
-        y_pos = np.arange(len(metrics))
-
-        # Increase figure size (wider)
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-        # Plot bars for increment = -0.05 (left side)
-        for i, val in enumerate(left_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], -abs(val), left=0, color=color)  # always extend left
-
-        # Plot bars for increment = 0.05 (right side)
-        for i, val in enumerate(right_vals):
-            color = 'tab:blue' if val >= 0 else 'tab:red'
-            ax.barh(y_pos[i], abs(val), left=0, color=color)  # always extend right
-
-        ax.axvline(0, color='black', linewidth=0.8)
-        ax.set_yticks(y_pos)
-        ax.set_yticklabels(metrics)
+        y_labels = [param_row_label_map.get(pr, pr) for pr in sorted_param_rows]
+        ax.set_yticklabels(y_labels)
+        ax.invert_yaxis()  # largest change on top
 
         # Adjust x-axis limits to add padding for labels
-        all_vals = left_vals + right_vals
-        max_val = max(abs(v) for v in all_vals) if all_vals else 1
-        padding = max_val * 0.15  # 15% padding on each side
+        all_vals = np.concatenate([left_vals_sorted, right_vals_sorted])
+        max_val = max(abs(all_vals)) if len(all_vals) > 0 else 1
+        padding = max_val * 0.25
         ax.set_xlim(-max_val - padding, max_val + padding)
 
-        # Add numeric labels next to bars (after setting limits)
-        for i, val in enumerate(left_vals):
+        # Add numeric labels next to bars
+        for i, val in enumerate(left_vals_sorted):
             color = 'tab:blue' if val >= 0 else 'tab:red'
-            xpos = -abs(val) - padding * 0.05  # slightly inside plot area
-            ax.text(xpos, y_pos[i], f'{val:.3f}', va='center', ha='right', color=color, fontsize=9)
+            xpos = -abs(val) - padding * 0.05
+            ax.text(xpos, y_pos[i], f'{val:.3f}', va='center', ha='right', color=color, fontsize=7)
 
-        for i, val in enumerate(right_vals):
+        for i, val in enumerate(right_vals_sorted):
             color = 'tab:blue' if val >= 0 else 'tab:red'
-            xpos = abs(val) + padding * 0.05  # slightly inside plot area
-            ax.text(xpos, y_pos[i], f'{val:.3f}', va='center', ha='left', color=color, fontsize=9)
+            xpos = abs(val) + padding * 0.05
+            ax.text(xpos, y_pos[i], f'{val:.3f}', va='center', ha='left', color=color, fontsize=7)
 
         # Custom x-axis labels for left and right sides
         ax.set_xticks([-max_val, 0, max_val])
         ax.set_xticklabels([r'-0.05 increment', '0', r'0.05 increment'])
 
-        ax.set_title(f'Tornado Plot for param = {param}')
+        ax.set_xlabel('Average Value')
+        ax.set_title(f'Tornado Plot for metric: {metric}')
+
+        ax.set_title(metrics_plot_title.get(metric, ''))
+        ax.set_xlabel(metric_plot_x_axis.get(metric, ''))
+        ax.set_ylabel('Parameters')
 
         # Legend for colors
         from matplotlib.patches import Patch
 
-        legend_elements = [
-            Patch(facecolor='tab:blue', label='Positive Value'),
-            Patch(facecolor='tab:red', label='Negative Value'),
-        ]
-        ax.legend(handles=legend_elements, loc='best')
+        if metric not in 'RMSE':
+            legend_elements = [
+                Patch(facecolor='tab:blue', label='Positive Value'),
+                Patch(facecolor='tab:red', label='Negative Value'),
+            ]
+            ax.legend(handles=legend_elements, loc='best', fontsize='x-small')
 
         plt.tight_layout()
         plt.show()
 
 
-# Example usage:
-plot_tornado(df)
+plot_tornado_by_param_row(df, metrics_plot_title, metric_plot_x_axis, param_row_label_map)
+
+
+########################################################################

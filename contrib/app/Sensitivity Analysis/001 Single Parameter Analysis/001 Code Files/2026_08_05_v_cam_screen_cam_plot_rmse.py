@@ -387,13 +387,13 @@ def rmse_line_plot(
                         rmse_diff = sorted_df['rmse_diff']
                     vector_dir = single_df['vector_direction'].dropna().unique()
                     x_label = (
-                        fr'incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
+                        fr'Incremental change in the camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                         if len(vector_dir) == 1
                         else 'incremental change (m)'
                     )
                     if plot_title_assigned is None:
                         plot_title_assigned_vectorized = str(
-                            'Focal Length Variation as a function of change in the'
+                            'RMSE as a function of change in the'
                             + '\n'
                             + fr'camera to screen origin $\vec{{v}}_{{{vector_dir[0]}}}$ (m)'
                         )
