@@ -1,5 +1,7 @@
 """
 
+
+
 Summary
 -------
 
@@ -305,6 +307,7 @@ def singleparametersa(
     upper_limit=100,
     steps=1,
     naming_prefix='',
+    ini_file_path_name='ini_file_paths',
 ):
     """
 
@@ -586,8 +589,8 @@ def singleparametersa(
             f"Unsupported data shape for target variable '{target_variable}': {getattr(original_values, 'shape', type(original_values))}"
         )
 
-    inifile_pathlist_df = pd.DataFrame(inifile_pathlist, columns=['ini_file_paths'])
-    csv_path = os.path.join(output_dir, 'ini_file_paths.csv')
+    inifile_pathlist_df = pd.DataFrame(inifile_pathlist, columns=[f'{ini_file_path_name}'])
+    csv_path = os.path.join(output_dir, f'{ini_file_path_name}.csv')
     inifile_pathlist_df.to_csv(csv_path, index=False)
     print(f"list of ini filepaths saved to {csv_path}")
 
@@ -672,6 +675,7 @@ inifile_pathlist_1 = singleparametersa(
     lower_limit=-0.05,
     upper_limit=0.05,
     steps=0.05,
+    ini_file_path_name=f'ini_file_paths_{naming_prefix}',
 )
 
 ### PROCESS all INI File generated from code above in the SOFAST Process ###
@@ -717,6 +721,7 @@ inifile_pathlist_2 = singleparametersa(
     lower_limit=-0.05,
     upper_limit=0.05,
     steps=0.05,
+    ini_file_path_name=f'ini_file_paths_{naming_prefix}',
 )
 
 ### PROCESS all INI File generated from code above in the SOFAST Process ###
